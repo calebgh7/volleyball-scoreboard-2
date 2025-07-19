@@ -145,6 +145,22 @@ export default function ControlPanel({ data }: ControlPanelProps) {
     }
   };
 
+  const handleSetsWonChange = async (team: 'home' | 'away', value: number) => {
+    try {
+      const field = team === 'home' ? 'homeSetsWon' : 'awaySetsWon';
+      await apiRequest('PATCH', `/api/matches/${match.id}`, { 
+        [field]: Math.max(0, Math.min(5, value))
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update sets won",
+        variant: "destructive"
+      });
+    }
+  };
+
   const openOverlayWindow = () => {
     const overlayUrl = `${window.location.origin}/?overlay=true`;
     window.open(overlayUrl, 'Scoreboard Overlay', 'width=1920,height=1080,toolbar=no,menubar=no,scrollbars=no,status=no');
@@ -221,8 +237,42 @@ export default function ControlPanel({ data }: ControlPanelProps) {
             </div>
           </div>
           
-          {/* Set Management */}
+          {/* Sets Won Control */}
           <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-medium text-gray-700">Sets Won</span>
+              <div className="text-lg font-condensed font-bold">
+                <span className="text-primary">{match.homeSetsWon}</span>
+                <span className="mx-2 text-gray-400">-</span>
+                <span className="text-primary">{match.awaySetsWon}</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <Label className="text-xs text-gray-600">Home Sets</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="5"
+                  value={match.homeSetsWon}
+                  onChange={(e) => handleSetsWonChange('home', parseInt(e.target.value) || 0)}
+                  className="text-center mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Away Sets</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="5"
+                  value={match.awaySetsWon}
+                  onChange={(e) => handleSetsWonChange('away', parseInt(e.target.value) || 0)}
+                  className="text-center mt-1"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Button 
                 onClick={handleCompleteSet}

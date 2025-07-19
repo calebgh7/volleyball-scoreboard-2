@@ -99,6 +99,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get settings
+  app.get("/api/settings", async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json(settings || {
+        id: 1,
+        sponsorLogoPath: null,
+        primaryColor: "#1565C0",
+        accentColor: "#FF6F00",
+        theme: "standard"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get settings" });
+    }
+  });
+
+  // Update settings
+  app.patch("/api/settings", async (req, res) => {
+    try {
+      const updates = req.body;
+      const updatedSettings = await storage.updateSettings(updates);
+      res.json(updatedSettings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Upload sponsor logo
+  app.post("/api/settings/sponsor-logo", upload.single('logo'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const logoPath = `/uploads/${req.file.filename}`;
+      await storage.updateSettings({ sponsorLogoPath: logoPath });
+      
+      res.json({ logoPath });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload sponsor logo" });
+    }
+  });
+
   // Upload team logo
   app.post("/api/teams/:id/logo", upload.single('logo'), async (req, res) => {
     try {

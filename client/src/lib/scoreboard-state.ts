@@ -11,18 +11,12 @@ export const incrementScore = async (team: 'home' | 'away', matchId: number, cur
   const newScore = currentScore + 1;
   const updateKey = team === 'home' ? 'homeScore' : 'awayScore';
   
-  await queryClient.fetchQuery({
-    queryKey: [`/api/game-state/${matchId}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/game-state/${matchId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [updateKey]: newScore })
-      });
-      if (!response.ok) throw new Error('Failed to update score');
-      return response.json();
-    }
+  const response = await fetch(`/api/game-state/${matchId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [updateKey]: newScore })
   });
+  if (!response.ok) throw new Error('Failed to update score');
   
   queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
 };
@@ -33,18 +27,12 @@ export const decrementScore = async (team: 'home' | 'away', matchId: number, cur
   const newScore = currentScore - 1;
   const updateKey = team === 'home' ? 'homeScore' : 'awayScore';
   
-  await queryClient.fetchQuery({
-    queryKey: [`/api/game-state/${matchId}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/game-state/${matchId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [updateKey]: newScore })
-      });
-      if (!response.ok) throw new Error('Failed to update score');
-      return response.json();
-    }
+  const response = await fetch(`/api/game-state/${matchId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [updateKey]: newScore })
   });
+  if (!response.ok) throw new Error('Failed to update score');
   
   queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
 };
