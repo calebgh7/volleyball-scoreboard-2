@@ -70,7 +70,7 @@ export const completeSet = async (matchId: number, homeScore: number, awayScore:
   const winner = homeScore > awayScore ? 'home' : 'away';
   const newSetHistory = [...setHistory];
   
-  // Update current set in history
+  // Update current set in history or add new set
   const currentSetIndex = newSetHistory.findIndex(set => set.setNumber === currentSet);
   if (currentSetIndex >= 0) {
     newSetHistory[currentSetIndex] = {
@@ -79,6 +79,26 @@ export const completeSet = async (matchId: number, homeScore: number, awayScore:
       awayScore,
       winner
     };
+  } else {
+    // Add the new completed set
+    newSetHistory.push({
+      setNumber: currentSet,
+      homeScore,
+      awayScore,
+      winner
+    });
+  }
+  
+  // Add next set placeholder if not at end of match
+  const nextSet = currentSet + 1;
+  const hasNextSet = newSetHistory.some(set => set.setNumber === nextSet);
+  if (!hasNextSet && nextSet <= 5) { // Max 5 sets
+    newSetHistory.push({
+      setNumber: nextSet,
+      homeScore: 0,
+      awayScore: 0,
+      winner: null
+    });
   }
   
   // Update match with new set winner and history
@@ -92,7 +112,7 @@ export const completeSet = async (matchId: number, homeScore: number, awayScore:
           setHistory: newSetHistory,
           homeSetsWon: newSetHistory.filter(set => set.winner === 'home').length,
           awaySetsWon: newSetHistory.filter(set => set.winner === 'away').length,
-          currentSet: currentSet + 1
+          currentSet: nextSet
         })
       });
       if (!response.ok) throw new Error('Failed to complete set');

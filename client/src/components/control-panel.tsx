@@ -126,6 +126,25 @@ export default function ControlPanel({ data }: ControlPanelProps) {
     }
   };
 
+  const handleMatchFormatChange = async (format: string) => {
+    try {
+      await apiRequest('PATCH', `/api/matches/${match.id}`, { 
+        format: parseInt(format) 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+      toast({
+        title: "Success",
+        description: `Match format changed to best of ${format}`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update match format",
+        variant: "destructive"
+      });
+    }
+  };
+
   const openOverlayWindow = () => {
     const overlayUrl = `${window.location.origin}/?overlay=true`;
     window.open(overlayUrl, 'Scoreboard Overlay', 'width=1920,height=1080,toolbar=no,menubar=no,scrollbars=no,status=no');
@@ -295,7 +314,7 @@ export default function ControlPanel({ data }: ControlPanelProps) {
           {/* Match Format */}
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">Match Format</Label>
-            <Select value={match.format.toString()}>
+            <Select value={match.format.toString()} onValueChange={handleMatchFormatChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

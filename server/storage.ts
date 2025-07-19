@@ -77,14 +77,14 @@ export class MemStorage implements IStorage {
       homeTeamId: homeTeam.id,
       awayTeamId: awayTeam.id,
       format: 5,
-      currentSet: 1,
+      currentSet: 3,
       homeSetsWon: 2,
-      awaySetsWon: 1,
+      awaySetsWon: 0,
       isComplete: false,
       setHistory: [
-        { setNumber: 1, homeScore: 25, awayScore: 23, winner: 'home' },
-        { setNumber: 2, homeScore: 25, awayScore: 18, winner: 'home' },
-        { setNumber: 3, homeScore: 21, awayScore: 19, winner: null }
+        { setNumber: 1, homeScore: 25, awayScore: 23, winner: 'home' as const },
+        { setNumber: 2, homeScore: 25, awayScore: 18, winner: 'home' as const },
+        { setNumber: 3, homeScore: 0, awayScore: 0, winner: null }
       ]
     };
     
@@ -95,8 +95,8 @@ export class MemStorage implements IStorage {
     const state: GameState = {
       id: this.currentGameStateId++,
       matchId: match.id,
-      homeScore: 21,
-      awayScore: 19,
+      homeScore: 0,
+      awayScore: 0,
       displayOptions: {
         showSetHistory: true,
         showSponsors: true,
@@ -108,7 +108,12 @@ export class MemStorage implements IStorage {
   }
 
   async createTeam(insertTeam: InsertTeam): Promise<Team> {
-    const team: Team = { ...insertTeam, id: this.currentTeamId++ };
+    const team: Team = { 
+      ...insertTeam, 
+      id: this.currentTeamId++,
+      location: insertTeam.location ?? null,
+      logoPath: insertTeam.logoPath ?? null
+    };
     this.teams.set(team.id, team);
     return team;
   }
@@ -127,7 +132,18 @@ export class MemStorage implements IStorage {
   }
 
   async createMatch(insertMatch: InsertMatch): Promise<Match> {
-    const match: Match = { ...insertMatch, id: this.currentMatchId++ };
+    const match: Match = { 
+      ...insertMatch, 
+      id: this.currentMatchId++,
+      homeTeamId: insertMatch.homeTeamId ?? null,
+      awayTeamId: insertMatch.awayTeamId ?? null,
+      format: insertMatch.format ?? 5,
+      currentSet: insertMatch.currentSet ?? 1,
+      homeSetsWon: insertMatch.homeSetsWon ?? 0,
+      awaySetsWon: insertMatch.awaySetsWon ?? 0,
+      isComplete: insertMatch.isComplete ?? false,
+      setHistory: (insertMatch.setHistory ?? []) as Array<{setNumber: number, homeScore: number, awayScore: number, winner: 'home' | 'away' | null}>
+    };
     this.matches.set(match.id, match);
     this.currentMatchIdActive = match.id;
     return match;
@@ -151,7 +167,14 @@ export class MemStorage implements IStorage {
   }
 
   async createGameState(insertState: InsertGameState): Promise<GameState> {
-    const state: GameState = { ...insertState, id: this.currentGameStateId++ };
+    const state: GameState = { 
+      ...insertState, 
+      id: this.currentGameStateId++,
+      matchId: insertState.matchId ?? null,
+      homeScore: insertState.homeScore ?? 0,
+      awayScore: insertState.awayScore ?? 0,
+      displayOptions: insertState.displayOptions ?? { showSetHistory: true, showSponsors: true, showTimer: false }
+    };
     this.gameStates.set(state.matchId!, state);
     return state;
   }
