@@ -289,27 +289,17 @@ app.patch("/api/settings", async (req, res) => {
   }
 });
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
-  
-  try {
-    const fs = await import('fs');
-    if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath));
-      
-      // Fall through to index.html for SPA routing
-      app.use("*", (req, res, next) => {
-        if (req.originalUrl.startsWith('/api/')) {
-          return next();
-        }
-        res.sendFile(path.resolve(distPath, "index.html"));
-      });
-    }
-  } catch (error) {
-    console.log('Static files not available, serving API only');
+// Simple catch-all for non-API routes
+app.use("*", (req, res, next) => {
+  if (req.originalUrl.startsWith('/api/')) {
+    return next();
   }
-}
+  res.status(404).json({ 
+    message: "Not Found", 
+    available: ["/api/health", "/api/current-match", "/api/game-state/:matchId", "/api/matches/:id", "/api/teams/:id", "/api/settings"],
+    note: "This is an API-only server. Use the client application to access the full interface."
+  });
+});
 
 // Error handling middleware
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
