@@ -3,12 +3,22 @@ import { useQuery } from "@tanstack/react-query";
 import ScoreboardDisplay from "@/components/scoreboard-display";
 import ControlPanel from "@/components/control-panel";
 import SettingsModal from "@/components/settings-modal";
+import TemplateManager from "@/components/template-manager";
+import LogoutButton from "@/components/logout-button";
 import { Button } from "@/components/ui/button";
-import { Settings, Tv } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Settings, Tv, FolderOpen } from "lucide-react";
 
-export default function Scoreboard() {
+interface ScoreboardProps {
+  user: any;
+  token: string;
+  onLogout: () => void;
+}
+
+export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
   const [isOverlayMode, setIsOverlayMode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
 
   const { data: currentMatch, isLoading } = useQuery({
     queryKey: ['/api/current-match'],
@@ -18,6 +28,12 @@ export default function Scoreboard() {
   const openOverlayWindow = () => {
     const overlayUrl = `${window.location.origin}/?overlay=true`;
     window.open(overlayUrl, 'Scoreboard Overlay', 'width=1920,height=1080,toolbar=no,menubar=no,scrollbars=no,status=no');
+  };
+
+  const handleLoadTemplate = (template: any) => {
+    // TODO: Implement template loading logic
+    console.log('Loading template:', template);
+    setIsTemplateManagerOpen(false);
   };
 
   if (isLoading) {
@@ -61,6 +77,17 @@ export default function Scoreboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 text-sm text-gray-600">
+                <span>Welcome, {user?.name || user?.email}</span>
+                <LogoutButton onLogout={onLogout} />
+              </div>
+              <Button 
+                onClick={() => setIsTemplateManagerOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Templates
+              </Button>
               <Button 
                 onClick={openOverlayWindow}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -100,6 +127,24 @@ export default function Scoreboard() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />
+
+      {/* Template Manager Modal */}
+      <Dialog open={isTemplateManagerOpen} onOpenChange={setIsTemplateManagerOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Scoreboard Templates</DialogTitle>
+            <DialogDescription>
+              Save and load your scoreboard configurations
+            </DialogDescription>
+          </DialogHeader>
+          <TemplateManager
+            token={token}
+            currentMatch={currentMatch}
+            currentSettings={currentMatch?.settings}
+            onLoadTemplate={handleLoadTemplate}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
