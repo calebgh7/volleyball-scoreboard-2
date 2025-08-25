@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
-import { insertTeamSchema, insertMatchSchema, insertGameStateSchema, insertSettingsSchema } from "@shared/schema";
+import { insertTeamSchema, insertMatchSchema, insertGameStateSchema, insertSettingsSchema } from "../shared/schema";
 
 const upload = multer({
   dest: 'uploads/',
