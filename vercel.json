@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "volleyball-scoreboard-2",
+  "outputDirectory": "dist",
   "routes": [
     {
       "src": "/api/(.*)",
