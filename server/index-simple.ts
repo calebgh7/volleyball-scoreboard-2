@@ -293,16 +293,21 @@ app.patch("/api/settings", async (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
   
-  if (require('fs').existsSync(distPath)) {
-    app.use(express.static(distPath));
-    
-    // Fall through to index.html for SPA routing
-    app.use("*", (req, res, next) => {
-      if (req.originalUrl.startsWith('/api/')) {
-        return next();
-      }
-      res.sendFile(path.resolve(distPath, "index.html"));
-    });
+  try {
+    const fs = await import('fs');
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      
+      // Fall through to index.html for SPA routing
+      app.use("*", (req, res, next) => {
+        if (req.originalUrl.startsWith('/api/')) {
+          return next();
+        }
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
+    }
+  } catch (error) {
+    console.log('Static files not available, serving API only');
   }
 }
 
