@@ -1,23 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { teams, matches, gameState, settings, users, userSessions } from '../shared/schema.js';
 import type { InsertTeam, InsertMatch, InsertGameState, InsertSettings, Team, Match, GameState, Settings } from '../shared/schema.js';
-
-// Database connection
-let db: ReturnType<typeof drizzle> | null = null;
-
-export async function getDatabase() {
-  if (!db) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is not set');
-    }
-    
-    const client = postgres(connectionString);
-    db = drizzle(client);
-  }
-  return db;
-}
 
 export interface IStorage {
   createTeam(insertTeam: InsertTeam): Promise<Team>;
@@ -40,7 +21,7 @@ export class MemStorage implements IStorage {
   private gameStates: Map<number, GameState> = new Map();
   private settingsData: Settings = {
     id: 1,
-    userId: "default-user-id", // Temporary default user ID for in-memory storage
+    userId: "default-user-id",
     sponsorLogoPath: null,
     sponsorLogoPublicId: null,
     primaryColor: "#1565C0",
@@ -61,7 +42,7 @@ export class MemStorage implements IStorage {
     // Initialize with default teams
     const homeTeam: Team = {
       id: this.currentTeamId++,
-      userId: "default-user-id", // Temporary default user ID
+      userId: "default-user-id",
       name: "EAGLES",
       location: "Central High",
       logoPath: null,
@@ -77,7 +58,7 @@ export class MemStorage implements IStorage {
     
     const awayTeam: Team = {
       id: this.currentTeamId++,
-      userId: "default-user-id", // Temporary default user ID
+      userId: "default-user-id",
       name: "TIGERS", 
       location: "North Valley",
       logoPath: null,
@@ -97,22 +78,18 @@ export class MemStorage implements IStorage {
     // Initialize default match
     const match: Match = {
       id: this.currentMatchId++,
-      userId: "default-user-id", // Temporary default user ID
+      userId: "default-user-id",
       name: "Default Match",
       homeTeamId: homeTeam.id,
       awayTeamId: awayTeam.id,
       format: 5,
-      currentSet: 3,
-      homeSetsWon: 2,
+      currentSet: 1,
+      homeSetsWon: 0,
       awaySetsWon: 0,
       isComplete: false,
       status: "in_progress",
       winner: null,
-      setHistory: [
-        { setNumber: 1, homeScore: 25, awayScore: 23, winner: 'home' as const },
-        { setNumber: 2, homeScore: 25, awayScore: 18, winner: 'home' as const },
-        { setNumber: 3, homeScore: 0, awayScore: 0, winner: null }
-      ],
+      setHistory: [],
       createdAt: new Date(),
       updatedAt: new Date(),
       lastPlayed: new Date()
@@ -121,18 +98,14 @@ export class MemStorage implements IStorage {
     this.matches.set(match.id, match);
     this.currentMatchIdActive = match.id;
     
-    // Initialize game state
+    // Initialize default game state
     const state: GameState = {
       id: this.currentGameStateId++,
       matchId: match.id,
       homeScore: 0,
       awayScore: 0,
       theme: "default",
-      displayOptions: {
-        showSetHistory: true,
-        showSponsors: true,
-        showTimer: false
-      },
+      displayOptions: { showSetHistory: true, showSponsors: true, showTimer: false },
       updatedAt: new Date()
     };
     
@@ -140,10 +113,10 @@ export class MemStorage implements IStorage {
   }
 
   async createTeam(insertTeam: InsertTeam): Promise<Team> {
-    const team: Team = { 
-      ...insertTeam, 
+    const team: Team = {
       id: this.currentTeamId++,
-      userId: insertTeam.userId,
+      userId: insertTeam.userId ?? "default-user-id",
+      name: insertTeam.name ?? "New Team",
       location: insertTeam.location ?? null,
       logoPath: insertTeam.logoPath ?? null,
       logoPublicId: insertTeam.logoPublicId ?? null,
@@ -176,7 +149,7 @@ export class MemStorage implements IStorage {
     const match: Match = { 
       ...insertMatch, 
       id: this.currentMatchId++,
-      userId: insertMatch.userId,
+      userId: insertMatch.userId ?? "default-user-id",
       name: insertMatch.name ?? null,
       homeTeamId: insertMatch.homeTeamId ?? null,
       awayTeamId: insertMatch.awayTeamId ?? null,
@@ -205,7 +178,22 @@ export class MemStorage implements IStorage {
     const match = this.matches.get(id);
     if (!match) return undefined;
     
-    const updatedMatch: Match = { ...match, ...matchUpdate, updatedAt: new Date() };
+    // Only update fields that are actually provided and valid
+    const updatedMatch: Match = { 
+      ...match, 
+      ...(matchUpdate.name !== undefined && { name: matchUpdate.name }),
+      ...(matchUpdate.homeTeamId !== undefined && { homeTeamId: matchUpdate.homeTeamId }),
+      ...(matchUpdate.awayTeamId !== undefined && { awayTeamId: matchUpdate.awayTeamId }),
+      ...(matchUpdate.format !== undefined && { format: matchUpdate.format }),
+      ...(matchUpdate.currentSet !== undefined && { currentSet: matchUpdate.currentSet }),
+      ...(matchUpdate.homeSetsWon !== undefined && { homeSetsWon: matchUpdate.homeSetsWon }),
+      ...(matchUpdate.awaySetsWon !== undefined && { awaySetsWon: matchUpdate.awaySetsWon }),
+      ...(matchUpdate.isComplete !== undefined && { isComplete: matchUpdate.isComplete }),
+      ...(matchUpdate.status !== undefined && { status: matchUpdate.status }),
+      ...(matchUpdate.winner !== undefined && { winner: matchUpdate.winner }),
+      ...(matchUpdate.setHistory !== undefined && { setHistory: matchUpdate.setHistory as Array<{setNumber: number, homeScore: number, awayScore: number, winner: 'home' | 'away' | null}> }),
+      updatedAt: new Date()
+    };
     this.matches.set(id, updatedMatch);
     return updatedMatch;
   }
