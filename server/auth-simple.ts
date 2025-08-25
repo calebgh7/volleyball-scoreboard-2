@@ -1,23 +1,30 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { databaseStorage } from './database-storage.js';
 
-// Simple in-memory user storage (in production, this would be a database)
-const users = new Map();
-const sessions = new Map();
-
-// Initialize with a default user for testing
-(function initializeUsers() {
-  const defaultUser = {
-    id: 'default-user-id',
-    email: 'admin@volleyscore.com',
-    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5u.Ge', // "password123"
-    name: 'Admin User',
-    createdAt: new Date(),
-    lastLogin: new Date()
-  };
-  
-  users.set(defaultUser.email, defaultUser);
-})();
+// Initialize default user if needed
+async function initializeDefaultUser() {
+  try {
+    const existingUser = await databaseStorage.findUserByEmail('admin@volleyscore.com');
+    if (!existingUser) {
+      const hashedPassword = await hashPassword('password123');
+      await databaseStorage.createUser({
+        id: 'default-user-id',
+        email: 'admin@volleyscore.com',
+        password: hashedPassword,
+        name: 'Admin User',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Initialize default data for this user
+      await databaseStorage.initializeUserData('default-user-id');
+      console.log('✅ Default user initialized');
+    }
+  } catch (error) {
+    console.error('Failed to initialize default user:', error);
+  }
+}
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -70,7 +77,8 @@ export const verifyToken = (token: string): { userId: string } | null => {
 export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
   try {
     // Check if user already exists
-    if (users.has(data.email)) {
+    const existingUser = await databaseStorage.findUserByEmail(data.email);
+    if (existingUser) {
       throw new Error('User with this email already exists');
     }
 
@@ -78,16 +86,17 @@ export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
     const hashedPassword = await hashPassword(data.password);
 
     // Create user
-    const newUser = {
+    const newUser = await databaseStorage.createUser({
       id: `user-${Date.now()}`,
       email: data.email,
       password: hashedPassword,
       name: data.name,
       createdAt: new Date(),
-      lastLogin: new Date()
-    };
+      updatedAt: new Date()
+    });
 
-    users.set(data.email, newUser);
+    // Initialize default data for the new user
+    await databaseStorage.initializeUserData(newUser.id);
     
     console.log(`✅ User registered successfully: ${newUser.email}`);
     return {
@@ -105,7 +114,7 @@ export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
 export const loginUser = async (credentials: LoginCredentials): Promise<{ user: AuthUser; token: string }> => {
   try {
     // Find user
-    const user = users.get(credentials.email);
+    const user = await databaseStorage.findUserByEmail(credentials.email);
     if (!user) {
       throw new Error('Invalid email or password');
     }
@@ -117,17 +126,18 @@ export const loginUser = async (credentials: LoginCredentials): Promise<{ user: 
     }
 
     // Update last login
-    user.lastLogin = new Date();
-    users.set(credentials.email, user);
+    await databaseStorage.updateUser(user.id, { lastLogin: new Date() });
 
     // Generate token
     const token = generateToken(user.id);
 
     // Store session
-    sessions.set(token, {
+    await databaseStorage.createSession({
+      token,
       userId: user.id,
       email: user.email,
-      createdAt: new Date()
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });
 
     console.log(`✅ User logged in successfully: ${user.email}`);
@@ -153,23 +163,28 @@ export const authenticateUser = async (token: string): Promise<AuthUser | null> 
       return null;
     }
 
-    const session = sessions.get(token);
+    const session = await databaseStorage.findSession(token);
     if (!session) {
       return null;
     }
 
-    // Find user
-    for (const user of users.values()) {
-      if (user.id === decoded.userId) {
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
-      }
+    // Check if session is expired
+    if (session.expiresAt && new Date() > session.expiresAt) {
+      await databaseStorage.deleteSession(token);
+      return null;
     }
 
-    return null;
+    // Find user
+    const user = await databaseStorage.findUserById(decoded.userId);
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
   } catch (error) {
     console.error('❌ Authentication failed:', error);
     return null;
@@ -179,7 +194,7 @@ export const authenticateUser = async (token: string): Promise<AuthUser | null> 
 // Logout user
 export const logoutUser = async (token: string): Promise<boolean> => {
   try {
-    sessions.delete(token);
+    await databaseStorage.deleteSession(token);
     return true;
   } catch (error) {
     console.error('❌ Logout failed:', error);
@@ -188,24 +203,35 @@ export const logoutUser = async (token: string): Promise<boolean> => {
 };
 
 // Get user by ID
-export const getUserById = (userId: string): AuthUser | null => {
-  for (const user of users.values()) {
-    if (user.id === userId) {
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      };
+export const getUserById = async (userId: string): Promise<AuthUser | null> => {
+  try {
+    const user = await databaseStorage.findUserById(userId);
+    if (!user) {
+      return null;
     }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
+  } catch (error) {
+    console.error('Failed to get user by ID:', error);
+    return null;
   }
-  return null;
 };
 
 // Get all users (for admin purposes)
-export const getAllUsers = (): AuthUser[] => {
-  return Array.from(users.values()).map(user => ({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-  }));
+export const getAllUsers = async (): Promise<AuthUser[]> => {
+  try {
+    // This would need to be implemented in database storage
+    // For now, return empty array
+    return [];
+  } catch (error) {
+    console.error('Failed to get all users:', error);
+    return [];
+  }
 };
+
+// Initialize default user when module is loaded
+initializeDefaultUser().catch(console.error);

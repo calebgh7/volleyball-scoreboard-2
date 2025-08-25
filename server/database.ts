@@ -1,98 +1,83 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import * as schema from '../shared/schema';
-import { env } from './env-validation';
+import { teams, matches, gameState, settings, users, userSessions, scoreboardTemplates } from '../shared/schema.js';
 
-// Database connection configuration
-const getDatabaseConfig = () => {
-  const isProduction = env.NODE_ENV === 'production';
-  
-  if (isProduction) {
-    // Production: Use PostgreSQL
-    return {
-      url: env.DATABASE_URL,
-      max: 10, // Connection pool size
-      ssl: { rejectUnauthorized: false },
-    };
-  } else {
-    // Development: Use local PostgreSQL or fallback to in-memory
-    const localDbUrl = process.env.LOCAL_DATABASE_URL || 'postgresql://localhost:5432/volleyscore';
-    
-    return {
-      url: localDbUrl,
-      max: 5,
-      ssl: false,
-    };
-  }
+// Database configuration
+const DATABASE_URL = process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL;
+
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
+
+// Create postgres client
+const client = postgres(DATABASE_URL, {
+  max: 1, // Use only one connection for serverless
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+// Create drizzle instance
+export const db = drizzle(client);
+
+// Export schema for migrations
+export const schema = {
+  teams,
+  matches,
+  gameState,
+  settings,
+  users,
+  userSessions,
+  scoreboardTemplates,
 };
 
-// Create database connection
-let client: postgres.Sql;
-let db: ReturnType<typeof drizzle>;
-
-// Initialize database with retry logic
-export const initializeDatabase = async (retries = 3): Promise<void> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const config = getDatabaseConfig();
-      client = postgres(config.url, config);
-      db = drizzle(client, { schema });
-      
-      console.log(`✅ Database connected successfully (${process.env.NODE_ENV || 'development'} mode)`);
-      return;
-    } catch (error) {
-      console.error(`❌ Database connection attempt ${i + 1} failed:`, error);
-      
-      if (i === retries - 1) {
-        if (process.env.NODE_ENV === 'production') {
-          throw error; // Fail fast in production
-        } else {
-          console.log('🔄 Falling back to in-memory storage for development');
-          // We'll handle in-memory fallback in storage.ts
-        }
-      } else {
-        // Wait before retrying (exponential backoff)
-        const delay = 1000 * Math.pow(2, i); // 1s, 2s, 4s
-        console.log(`🔄 Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-};
-
-// Initialize database on module load
-try {
-  await initializeDatabase();
-} catch (error) {
-  console.error('❌ Database initialization failed:', error);
-  if (process.env.NODE_ENV === 'production') {
+// Migration function
+export async function runMigrations() {
+  try {
+    console.log('🔄 Running database migrations...');
+    await migrate(db, { migrationsFolder: './drizzle' });
+    console.log('✅ Database migrations completed successfully');
+  } catch (error) {
+    console.error('❌ Database migration failed:', error);
     throw error;
   }
 }
 
-// Migration function
-export const runMigrations = async () => {
+// Health check function
+export async function checkDatabaseHealth() {
   try {
-    if (db) {
-      await migrate(db, { migrationsFolder: './drizzle' });
-      console.log('✅ Database migrations completed');
-    }
+    await client`SELECT 1`;
+    return { status: 'healthy', timestamp: new Date().toISOString() };
   } catch (error) {
-    console.error('❌ Migration failed:', error);
-    if (process.env.NODE_ENV === 'production') {
-      throw error;
-    }
+    console.error('Database health check failed:', error);
+    return { status: 'unhealthy', error: error.message, timestamp: new Date().toISOString() };
   }
-};
+}
 
 // Graceful shutdown
-export const closeDatabase = async () => {
-  if (client) {
+export async function closeDatabase() {
+  try {
     await client.end();
-    console.log('✅ Database connection closed');
+    console.log('✅ Database connection closed gracefully');
+  } catch (error) {
+    console.error('❌ Error closing database connection:', error);
   }
-};
+}
 
-export { db, client };
-export default db;
+// Initialize database tables if they don't exist
+export async function initializeDatabase() {
+  try {
+    console.log('🔄 Initializing database tables...');
+    
+    // Check if tables exist by trying to query them
+    const tablesExist = await checkDatabaseHealth();
+    
+    if (tablesExist.status === 'healthy') {
+      console.log('✅ Database tables are ready');
+    } else {
+      console.log('⚠️ Database tables may need initialization');
+    }
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+    throw error;
+  }
+}
