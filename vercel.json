@@ -1,6 +1,12 @@
 {
   "version": 2,
   "name": "volleyball-scoreboard-2",
+  "builds": [
+    {
+      "src": "server/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -8,7 +14,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/client/index.html"
+      "dest": "/server/index.ts"
     }
   ],
   "env": {
