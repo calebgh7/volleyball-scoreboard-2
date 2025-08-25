@@ -58,14 +58,22 @@ export class MemStorage implements IStorage {
       id: this.currentTeamId++,
       name: "EAGLES",
       location: "Central High",
-      logoPath: null
+      logoPath: null,
+      colorScheme: "purple",
+      customColor: null,
+      customTextColor: "#FFFFFF",
+      customSetBackgroundColor: "#000000"
     };
     
     const awayTeam: Team = {
       id: this.currentTeamId++,
       name: "TIGERS", 
       location: "North Valley",
-      logoPath: null
+      logoPath: null,
+      colorScheme: "blue",
+      customColor: null,
+      customTextColor: "#FFFFFF",
+      customSetBackgroundColor: "#000000"
     };
     
     this.teams.set(homeTeam.id, homeTeam);
@@ -97,6 +105,7 @@ export class MemStorage implements IStorage {
       matchId: match.id,
       homeScore: 0,
       awayScore: 0,
+      theme: "default",
       displayOptions: {
         showSetHistory: true,
         showSponsors: true,
@@ -112,7 +121,11 @@ export class MemStorage implements IStorage {
       ...insertTeam, 
       id: this.currentTeamId++,
       location: insertTeam.location ?? null,
-      logoPath: insertTeam.logoPath ?? null
+      logoPath: insertTeam.logoPath ?? null,
+      colorScheme: insertTeam.colorScheme ?? "pink",
+      customColor: insertTeam.customColor ?? null,
+      customTextColor: insertTeam.customTextColor ?? "#FFFFFF",
+      customSetBackgroundColor: insertTeam.customSetBackgroundColor ?? "#000000"
     };
     this.teams.set(team.id, team);
     return team;
@@ -173,6 +186,7 @@ export class MemStorage implements IStorage {
       matchId: insertState.matchId ?? null,
       homeScore: insertState.homeScore ?? 0,
       awayScore: insertState.awayScore ?? 0,
+      theme: insertState.theme ?? "default",
       displayOptions: insertState.displayOptions ?? { showSetHistory: true, showSponsors: true, showTimer: false }
     };
     this.gameStates.set(state.matchId!, state);

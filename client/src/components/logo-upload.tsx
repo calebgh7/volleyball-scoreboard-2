@@ -1,69 +1,213 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Image, AlertCircle, CheckCircle } from "lucide-react";
 
 interface LogoUploadProps {
   teamId: number;
   currentLogo?: string | null;
   label: string;
+  onLogoChange?: (logoPath: string) => void;
 }
 
-export default function LogoUpload({ teamId, currentLogo, label }: LogoUploadProps) {
+interface ImageValidation {
+  isValid: boolean;
+  width: number;
+  height: number;
+  size: number;
+  format: string;
+  errors: string[];
+}
+
+export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }: LogoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [validation, setValidation] = useState<ImageValidation | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Ensure we're in a browser environment
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Enhanced image validation
+  const validateImage = useCallback((file: File): Promise<ImageValidation> => {
+    return new Promise((resolve) => {
+      const errors: string[] = [];
+      
+      // File size validation (10MB max for high-quality logos)
+      if (file.size > 10 * 1024 * 1024) {
+        errors.push('File size must be less than 10MB');
+      }
+      
+      // File type validation
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        errors.push('Only JPEG, PNG, GIF, SVG, and WebP files are allowed');
+      }
+      
+      // Check if we're in a browser environment
+      if (typeof window !== 'undefined' && window.Image) {
+        // Image dimensions validation using browser Image constructor
+        const img = new window.Image();
+        img.onload = () => {
+          const width = img.width;
+          const height = img.height;
+          
+          // Minimum dimensions
+          if (width < 64 || height < 64) {
+            errors.push('Image must be at least 64x64 pixels');
+          }
+          
+          // Maximum dimensions - increased for high-quality logos
+          if (width > 4096 || height > 4096) {
+            errors.push('Image must be no larger than 4096x4096 pixels');
+          }
+          
+          // Aspect ratio check - more flexible for various logo shapes
+          const aspectRatio = width / height;
+          if (aspectRatio < 0.25 || aspectRatio > 4) {
+            errors.push('Image should have a reasonable aspect ratio (0.25 to 4.0)');
+          }
+          
+          resolve({
+            isValid: errors.length === 0,
+            width,
+            height,
+            size: file.size,
+            format: file.type,
+            errors
+          });
+        };
+        
+        img.onerror = () => {
+          errors.push('Invalid image file');
+          resolve({
+            isValid: false,
+            width: 0,
+            height: 0,
+            size: file.size,
+            format: file.type,
+            errors
+          });
+        };
+        
+        img.src = URL.createObjectURL(file);
+      } else {
+        // Fallback for server-side rendering - skip dimension validation
+        resolve({
+          isValid: errors.length === 0,
+          width: 0,
+          height: 0,
+          size: file.size,
+          format: file.type,
+          errors
+        });
+      }
+    });
+  }, []);
+
+  // Create preview for validation
+  const createPreview = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   const handleFileUpload = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Error",
-        description: "Please select an image file",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: "Error", 
-        description: "File size must be less than 2MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsUploading(true);
+    setValidation(null);
+    setPreview(null);
     
     try {
+      // Validate image
+      const imageValidation = await validateImage(file);
+      setValidation(imageValidation);
+      
+      if (!imageValidation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: imageValidation.errors.join(', '),
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Create preview
+      createPreview(file);
+      
+      // Prepare form data
       const formData = new FormData();
       formData.append('logo', file);
+      formData.append('teamId', teamId.toString());
+      formData.append('dimensions', `${imageValidation.width}x${imageValidation.height}`);
 
+      // Upload logo
       const response = await fetch(`/api/teams/${teamId}/logo`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Upload failed');
       }
 
+      const result = await response.json();
+      
+      // Update UI and notify parent
       queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+      onLogoChange?.(result.logoPath);
+      
       toast({
         title: "Success",
-        description: "Logo uploaded successfully"
+        description: "Logo uploaded successfully",
+        variant: "default"
       });
+      
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to upload logo",
+        description: error instanceof Error ? error.message : "Failed to upload logo",
         variant: "destructive"
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/logo`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove logo');
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+      onLogoChange?.('');
+      setPreview(null);
+      setValidation(null);
+      
+      toast({
+        title: "Success",
+        description: "Logo removed successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove logo",
+        variant: "destructive"
+      });
     }
   };
 
@@ -98,44 +242,109 @@ export default function LogoUpload({ teamId, currentLogo, label }: LogoUploadPro
     }
   };
 
+  const displayLogo = preview || currentLogo;
+  const hasLogo = displayLogo && !isUploading;
+
+  // Don't render until we're in the client environment
+  if (!isClient) {
+    return (
+      <div className="text-center">
+        <Card className="w-full h-28 border-2 border-dashed border-gray-300 bg-gray-50">
+          <div className="h-full flex flex-col items-center justify-center p-2">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-1"></div>
+              <p className="text-xs text-gray-500">Loading...</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="text-center">
       <Card 
-        className={`w-full h-24 border-2 border-dashed transition-colors cursor-pointer ${
+        className={`w-full h-28 border-2 border-dashed transition-all duration-200 cursor-pointer ${
           dragActive 
-            ? 'border-primary bg-primary/5' 
-            : currentLogo 
+            ? 'border-primary bg-primary/5 scale-105' 
+            : hasLogo 
               ? 'border-green-300 bg-green-50' 
-              : 'border-gray-300 hover:border-primary'
+              : 'border-gray-300 hover:border-primary hover:bg-gray-50'
         }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={handleClick}
       >
-        <div className="h-full flex items-center justify-center p-2">
+        <div className="h-full flex flex-col items-center justify-center p-2 relative">
           {isUploading ? (
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-1"></div>
               <p className="text-xs text-gray-500">Uploading...</p>
             </div>
-          ) : currentLogo ? (
-            <div className="text-center relative">
+          ) : hasLogo ? (
+            <div className="text-center relative group">
               <img 
-                src={currentLogo} 
+                src={displayLogo} 
                 alt={label}
-                className="h-16 w-16 object-cover rounded mx-auto mb-1"
+                className="h-16 w-16 object-cover rounded mx-auto mb-1 shadow-sm"
               />
-              <p className="text-xs text-green-600">Uploaded</p>
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveLogo();
+                  }}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              <p className="text-xs text-green-600 flex items-center justify-center">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Uploaded
+              </p>
             </div>
           ) : (
             <div className="text-center">
               <Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" />
               <p className="text-xs text-gray-500">{label}</p>
+              <p className="text-xs text-gray-400 mt-1">Click or drag to upload</p>
             </div>
           )}
         </div>
       </Card>
+      
+      {/* Validation Info */}
+      {validation && (
+        <div className={`mt-2 p-2 rounded text-xs ${
+          validation.isValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+        }`}>
+          <div className="flex items-center justify-center mb-1">
+            {validation.isValid ? (
+              <CheckCircle className="h-3 w-3 mr-1" />
+            ) : (
+              <AlertCircle className="h-3 w-3 mr-1" />
+            )}
+            <span className="font-medium">
+              {validation.isValid ? 'Valid Image' : 'Validation Issues'}
+            </span>
+          </div>
+          <div className="text-center">
+            <div>{validation.width} × {validation.height} pixels</div>
+            <div>{(validation.size / 1024).toFixed(1)} KB</div>
+            {!validation.isValid && (
+              <div className="mt-1">
+                {validation.errors.map((error, index) => (
+                  <div key={index} className="text-red-600">• {error}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       <input
         ref={fileInputRef}

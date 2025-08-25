@@ -7,7 +7,7 @@ import { insertTeamSchema, insertMatchSchema, insertGameStateSchema, insertSetti
 
 const upload = multer({
   dest: 'uploads/',
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for high-quality logos
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|svg/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -22,6 +22,11 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check route
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
 
@@ -62,6 +67,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedState);
     } catch (error) {
       res.status(500).json({ message: "Failed to update game state" });
+    }
+  });
+
+  // Get match by ID
+  app.get("/api/matches/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const match = await storage.getMatch(id);
+      
+      if (!match) {
+        return res.status(404).json({ message: "Match not found" });
+      }
+      
+      res.json(match);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get match" });
     }
   });
 
@@ -222,6 +243,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(newMatch);
     } catch (error) {
       res.status(500).json({ message: "Failed to create match" });
+    }
+  });
+
+  // Reset match
+  app.post("/api/matches/:id/reset", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Reset match data
+      const resetMatch = await storage.updateMatch(id, {
+        currentSet: 1,
+        homeSetsWon: 0,
+        awaySetsWon: 0,
+        isComplete: false,
+        setHistory: []
+      });
+      
+      if (!resetMatch) {
+        return res.status(404).json({ message: "Match not found" });
+      }
+      
+      // Reset game state
+      await storage.updateGameState(id, {
+        homeScore: 0,
+        awayScore: 0
+      });
+      
+      res.json({ message: "Match reset successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reset match" });
     }
   });
 

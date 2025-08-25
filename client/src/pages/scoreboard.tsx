@@ -63,14 +63,14 @@ export default function Scoreboard() {
             <div className="flex items-center space-x-4">
               <Button 
                 onClick={openOverlayWindow}
-                className="bg-secondary hover:bg-secondary/90 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Tv className="mr-2 h-4 w-4" />
                 Overlay Mode
               </Button>
               <Button 
-                variant="outline"
                 onClick={() => setIsSettingsOpen(true)}
+                className="bg-gray-600 hover:bg-gray-700 text-white"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
@@ -82,14 +82,14 @@ export default function Scoreboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="space-y-6">
           {/* Scoreboard Display */}
-          <div className="lg:col-span-3">
+          <div>
             <ScoreboardDisplay data={currentMatch} />
           </div>
           
           {/* Control Panel */}
-          <div className="lg:col-span-2">
+          <div>
             <ControlPanel data={currentMatch} />
           </div>
         </div>

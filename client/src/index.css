@@ -31,6 +31,21 @@
   --broadcast-darker: hsl(220, 62%, 3%);
   --broadcast-blue: hsl(227, 68%, 25%);
   --broadcast-orange: hsl(20, 90%, 48%);
+  
+  /* Scorebug pill colors - Matching LOVB stream */
+  --team-pink: hsl(330, 70%, 60%);
+  --team-cyan: hsl(180, 70%, 60%);
+  --scorebug-bg: rgba(0, 0, 0, 0.8);
+  --scorebug-border: rgba(255, 255, 255, 0.1);
+  
+  /* Tournament overlay colors - Matching the image style exactly */
+  --overlay-bg: rgba(0, 0, 0, 0.85);
+  --overlay-border: rgba(255, 255, 255, 0.1);
+  --score-highlight: rgba(255, 193, 7, 0.2);
+  --team-green: hsl(142, 70%, 45%);
+  --team-purple: hsl(270, 70%, 60%);
+  --status-yellow: hsl(45, 100%, 50%);
+  --status-amber: hsl(45, 60%, 40%);
 }
 
 .dark {
@@ -76,36 +91,393 @@
   }
   
   .overlay-mode {
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(2px);
+    background: var(--overlay-bg);
+    backdrop-filter: blur(4px);
+    border: 1px solid var(--overlay-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   }
   
   .broadcast-bg {
-    background: linear-gradient(to bottom, var(--broadcast-dark), var(--broadcast-darker));
+    background: linear-gradient(135deg, var(--broadcast-dark), var(--broadcast-darker));
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .broadcast-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 111, 0, 0.05) 0%, transparent 70%);
+    pointer-events: none;
   }
   
   .broadcast-header {
-    background: linear-gradient(to right, var(--broadcast-dark), var(--broadcast-darker));
+    background: linear-gradient(135deg, var(--broadcast-dark), var(--broadcast-darker));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Ultra-compact tournament overlay - Exactly like the image */
+  .tournament-overlay {
+    background: var(--overlay-bg);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--overlay-border);
+    box-shadow: 
+      0 10px 20px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .score-highlight {
+    background: var(--score-highlight);
+    border-radius: 6px;
+    padding: 2px 6px;
+    transition: all 0.3s ease;
+  }
+  
+  .team-logo {
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+  
+  .team-logo:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  }
+  
+  .set-indicator {
+    background: linear-gradient(135deg, var(--secondary), var(--broadcast-orange));
+    border-radius: 16px;
+    padding: 3px 10px;
+    font-weight: 600;
+  }
+  
+  /* Professional tournament scoreboard styles */
+  .tournament-score {
+    font-family: 'Roboto Condensed', sans-serif;
+    font-weight: 900;
+  }
+  
+  .match-status {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 193, 7, 0.1));
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+  }
+  
+  .team-name {
+    font-weight: 600;
+  }
+  
+  .vs-indicator {
+    color: var(--status-yellow);
+    font-weight: 700;
+  }
+  
+  /* Ultra-compact specific styles */
+  .compact-overlay {
+    padding: 0.75rem;
+    min-height: 120px;
+    max-height: 140px;
+    overflow: hidden;
+  }
+  
+  .compact-team-logo {
+    width: 2rem;
+    height: 2rem;
+    border-width: 1px;
+  }
+  
+  .compact-score {
+    font-size: 2.25rem;
+    line-height: 1;
+  }
+  
+  .compact-text {
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+  
+  .compact-status {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.375rem;
+  }
+
+  /* Scorebug Overlay - Pill Design Like LOVB Stream */
+  .scorebug-overlay {
+    background: var(--theme-background, var(--scorebug-bg));
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--theme-border, var(--scorebug-border));
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    width: fit-content; /* Let it expand naturally */
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Transparent background for overlay mode */
+  .scorebug-overlay.bg-transparent {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  
+  /* Individual Scorebug Pills */
+  .scorebug-pill {
+    background: var(--theme-surface, rgba(255, 255, 255, 0.1));
+    border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.2));
+    border-radius: 20px;
+    padding: 8px 16px;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    width: fit-content; /* Let pills expand naturally */
+    min-width: 280px; /* Ensure enough width for three columns */
+    animation: fadeInUp 0.5s ease-out;
+  }
+  
+  .scorebug-pill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent);
+    pointer-events: none;
+  }
+  
+  /* Home Team Pill - Dynamic Colors */
+  .home-team-pill {
+    padding: 6px 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .home-team-pill:hover {
+    transform: translateY(-1px);
+  }
+  
+  /* Away Team Pill - Dynamic Colors */
+  .away-team-pill {
+    padding: 6px 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .away-team-pill:hover {
+    transform: translateY(-1px);
+  }
+  
+
+  
+
+  
+  /* Team Color Indicators */
+  .team-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  
+  .home-indicator {
+    background: var(--team-pink);
+    box-shadow: 0 1px 3px rgba(236, 72, 153, 0.4);
+  }
+  
+  .away-indicator {
+    background: var(--team-cyan);
+    box-shadow: 0 1px 3px rgba(34, 211, 238, 0.4);
+  }
+  
+
+  
+
+  
+  /* Scorebug Text Styling */
+  .scorebug-text {
+    font-family: 'Roboto', sans-serif;
+    font-size: 1.125rem; /* 18px - balanced team name size */
+    font-weight: 600;
+  }
+  
+  .scorebug-score {
+    font-family: 'Roboto Condensed', sans-serif;
+    font-weight: 900;
+  }
+  
+  /* Score Animation and Dynamics */
+  .score-animate {
+    transition: all 0.3s ease;
+  }
+  
+  .score-animate:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Score number styling */
+.scorebug-score {
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+/* Team Logo Styling */
+.scorebug-pill img {
+  transition: all 0.3s ease;
+}
+
+.scorebug-pill img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Sponsor Logo Styling */
+.scorebug-overlay img[alt="Sponsor logo"] {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+  max-width: 120px; /* Prevent logo from getting too wide */
+  min-width: 32px; /* Ensure minimum width for small logos */
+}
+
+.scorebug-overlay img[alt="Sponsor logo"]:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+  
+  /* Dynamic width for score pill based on content */
+  .score-pill .scorebug-score {
+    min-width: 2ch;
+    text-align: center;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .scorebug-overlay {
+      max-width: 140px;
+      min-width: 100px;
+      padding: 0.5rem;
+    }
+    
+    .scorebug-pill {
+      padding: 6px 10px;
+      border-radius: 16px;
+    }
+    
+    .score-pill .scorebug-score {
+      font-size: 1.5rem;
+    }
   }
 }
 
 @keyframes scoreUpdate {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); color: var(--accent); }
-  100% { transform: scale(1); }
+  0% { 
+    transform: scale(1); 
+    filter: brightness(1);
+    opacity: 0.8;
+  }
+  25% { 
+    transform: scale(1.15); 
+    filter: brightness(1.2);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1); 
+    filter: brightness(1.1);
+    opacity: 1;
+  }
+  75% { 
+    transform: scale(1.05); 
+    filter: brightness(1.05);
+    opacity: 1;
+  }
+  100% { 
+    transform: scale(1); 
+    filter: brightness(1);
+    opacity: 1;
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 5px rgba(255, 111, 0, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(255, 111, 0, 0.8); }
+  0%, 100% { 
+    box-shadow: 0 0 3px rgba(255, 193, 7, 0.5);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.8);
+    transform: scale(1.01);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Font imports for condensed volleyball scoreboard typography */
-
 .font-condensed {
   font-family: 'Roboto Condensed', sans-serif;
 }
 
 .font-roboto {
   font-family: 'Roboto', sans-serif;
+}
+
+/* Responsive tournament overlay */
+@media (max-width: 768px) {
+  .tournament-overlay {
+    padding: 0.5rem;
+    min-height: 100px;
+    max-width: 100%;
+  }
+  
+  .broadcast-bg {
+    min-height: 200px;
+    padding: 0.5rem;
+  }
+  
+  .compact-score {
+    font-size: 1.875rem;
+  }
+}
+
+/* High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+  .broadcast-bg {
+    background: #000;
+  }
+  
+  .broadcast-header {
+    background: #111;
+    border-bottom: 2px solid #fff;
+  }
+  
+  .tournament-overlay {
+    background: #000;
+    border: 2px solid #fff;
+  }
+
+  .scorebug-overlay {
+    background: #000;
+    border: 2px solid #fff;
+  }
+  
+  .scorebug-pill {
+    border: 2px solid #fff;
+  }
 }
