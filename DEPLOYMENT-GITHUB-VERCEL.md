@@ -13,18 +13,15 @@ This guide will walk you through deploying VolleyScore Pro to GitHub and Vercel 
 ## 🎯 **Deployment Overview**
 
 ```
-GitHub Repository → Vercel Deployment → Supabase Database → Cloudinary Storage
+volleyball-scoreboard-2 Repository → Vercel Deployment → Supabase Database → Cloudinary Storage
 ```
 
 ## 📁 **Step 1: GitHub Repository Setup**
 
-### **1.1 Create GitHub Repository**
-1. Go to [GitHub](https://github.com) and click "New repository"
-2. Repository name: `volleyscore-pro`
-3. Description: `Professional volleyball scoreboard system with online hosting`
-4. Make it **Public** (for free Vercel deployment)
-5. Don't initialize with README (we already have one)
-6. Click "Create repository"
+### **1.1 Use Existing GitHub Repository**
+✅ You already have the repository: `volleyball-scoreboard-2`
+- Repository: `https://github.com/yourusername/volleyball-scoreboard-2`
+- Status: Ready for deployment
 
 ### **1.2 Push Your Code to GitHub**
 ```bash
@@ -149,7 +146,7 @@ vercel --prod
 ### **5.1 Enable GitHub Integration**
 1. In Vercel Dashboard, go to **Settings** → **Git**
 2. Click **Connect Git Repository**
-3. Select your `volleyscore-pro` repository
+3. Select your `volleyball-scoreboard-2` repository
 4. Configure deployment settings:
    - Production Branch: `main`
    - Framework Preset: `Other`
@@ -180,7 +177,7 @@ vercel project ls
 ## 🧪 **Step 6: Test Your Deployment**
 
 ### **6.1 Test Basic Functionality**
-1. Visit your Vercel URL: `https://volleyscore-pro.vercel.app`
+1. Visit your Vercel URL: `https://volleyball-scoreboard-2.vercel.app`
 2. Test user registration
 3. Test team creation
 4. Test image uploads
@@ -278,8 +275,8 @@ After completing these steps, you'll have:
 
 ## 🔗 **Your Live App**
 
-- **URL**: `https://volleyscore-pro.vercel.app`
-- **GitHub**: `https://github.com/YOUR_USERNAME/volleyscore-pro`
+- **URL**: `https://volleyball-scoreboard-2.vercel.app`
+- **GitHub**: `https://github.com/YOUR_USERNAME/volleyball-scoreboard-2`
 - **Vercel Dashboard**: `https://vercel.com/dashboard`
 
 ## 📱 **Next Steps**
