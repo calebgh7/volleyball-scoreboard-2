@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
+import { loginUser, registerUser, logoutUser, authenticateUser } from "./auth-simple.js";
+import { authenticateToken, optionalAuth } from "./auth-middleware.js";
 
 const app = express();
 app.use(express.json());
@@ -26,6 +28,7 @@ const storage = {
   teams: new Map(),
   matches: new Map(),
   gameStates: new Map(),
+  templates: new Map(),
   settings: {
     id: 1,
     userId: "default-user-id",
@@ -114,6 +117,53 @@ const storage = {
   
   storage.gameStates.set(match.id, gameState);
 })();
+
+// Authentication Routes
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    
+    const user = await registerUser({ email, password, name });
+    res.status(201).json({ message: "User registered successfully", user });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    
+    const result = await loginUser({ email, password });
+    res.json(result);
+  } catch (error: any) {
+    res.status(401).json({ message: error.message });
+  }
+});
+
+app.post("/api/auth/logout", authenticateToken, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await logoutUser(token);
+    }
+    res.json({ message: "Logged out successfully" });
+  } catch (error: any) {
+    res.status(500).json({ message: "Logout failed" });
+  }
+});
+
+app.get("/api/auth/me", authenticateToken, (req, res) => {
+  res.json({ user: req.user });
+});
 
 // API Routes
 app.get("/api/health", (req, res) => {
@@ -286,6 +336,141 @@ app.patch("/api/settings", async (req, res) => {
     res.json(storage.settings);
   } catch (error) {
     res.status(500).json({ message: "Failed to update settings" });
+  }
+});
+
+// Scoreboard Template Routes
+app.post("/api/templates", authenticateToken, async (req, res) => {
+  try {
+    const { name, description, homeTeamId, awayTeamId, settings } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: "Template name is required" });
+    }
+    
+    const template = {
+      id: Date.now(),
+      userId: req.user!.id,
+      name,
+      description,
+      homeTeamId,
+      awayTeamId,
+      settings,
+      isPublic: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Store template (in production, this would go to a database)
+    if (!storage.templates) {
+      storage.templates = new Map();
+    }
+    storage.templates.set(template.id, template);
+    
+    res.status(201).json(template);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/templates", optionalAuth, async (req, res) => {
+  try {
+    if (!storage.templates) {
+      return res.json([]);
+    }
+    
+    let templates = Array.from(storage.templates.values());
+    
+    // If user is authenticated, show their templates + public ones
+    if (req.user) {
+      const userTemplates = templates.filter(t => t.userId === req.user!.id);
+      const publicTemplates = templates.filter(t => t.isPublic);
+      templates = [...userTemplates, ...publicTemplates];
+    } else {
+      // Show only public templates for unauthenticated users
+      templates = templates.filter(t => t.isPublic);
+    }
+    
+    res.json(templates);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/templates/:id", optionalAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (!storage.templates) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    const template = storage.templates.get(id);
+    if (!template) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    // Check if user can access this template
+    if (!template.isPublic && req.user?.id !== template.userId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    res.json(template);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put("/api/templates/:id", authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (!storage.templates) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    const template = storage.templates.get(id);
+    if (!template) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    // Check if user owns this template
+    if (template.userId !== req.user!.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const updates = req.body;
+    const updatedTemplate = { ...template, ...updates, updatedAt: new Date() };
+    storage.templates.set(id, updatedTemplate);
+    
+    res.json(updatedTemplate);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete("/api/templates/:id", authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (!storage.templates) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    const template = storage.templates.get(id);
+    if (!template) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    // Check if user owns this template
+    if (template.userId !== req.user!.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    storage.templates.delete(id);
+    res.json({ message: "Template deleted successfully" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 
