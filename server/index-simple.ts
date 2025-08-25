@@ -289,61 +289,17 @@ app.patch("/api/settings", async (req, res) => {
   }
 });
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  try {
-    const fs = await import('fs');
-    const distPath = './dist/public';
-    
-    if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath));
-      
-      // Fall through to index.html for SPA routing
-      app.use("*", (req, res, next) => {
-        if (req.originalUrl.startsWith('/api/')) {
-          return next();
-        }
-        res.sendFile(path.resolve(distPath, "index.html"));
-      });
-    } else {
-      // Fallback if static files not found
-      app.use("*", (req, res, next) => {
-        if (req.originalUrl.startsWith('/api/')) {
-          return next();
-        }
-        res.status(404).json({ 
-          message: "Static files not found", 
-          available: ["/api/health", "/api/current-match", "/api/game-state/:matchId", "/api/matches/:id", "/api/teams/:id", "/api/settings"],
-          note: "Client application not yet built. Use API endpoints directly."
-        });
-      });
-    }
-  } catch (error) {
-    console.log('Error serving static files:', error);
-    // Fallback response
-    app.use("*", (req, res, next) => {
-      if (req.originalUrl.startsWith('/api/')) {
-        return next();
-      }
-      res.status(404).json({ 
-        message: "Server error", 
-        available: ["/api/health", "/api/current-match", "/api/game-state/:matchId", "/api/matches/:id", "/api/teams/:id", "/api/settings"]
-      });
-    });
+// API-only server - Vercel handles static files
+app.use("*", (req, res, next) => {
+  if (req.originalUrl.startsWith('/api/')) {
+    return next();
   }
-} else {
-  // Development mode - simple catch-all
-  app.use("*", (req, res, next) => {
-    if (req.originalUrl.startsWith('/api/')) {
-      return next();
-    }
-    res.status(404).json({ 
-      message: "Not Found", 
-      available: ["/api/health", "/api/current-match", "/api/game-state/:matchId", "/api/matches/:id", "/api/teams/:id", "/api/settings"],
-      note: "This is an API-only server in development mode."
-    });
+  res.status(404).json({ 
+    message: "Not Found", 
+    available: ["/api/health", "/api/current-match", "/api/game-state/:matchId", "/api/matches/:id", "/api/teams/:id", "/api/settings"],
+    note: "This is an API-only server. The client application is served by Vercel."
   });
-}
+});
 
 // Error handling middleware
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

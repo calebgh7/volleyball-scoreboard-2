@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "vite build --outDir dist/public",
+    "vercel-build": "vite build --outDir dist/public",
     "start": "NODE_ENV=production node dist/server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
