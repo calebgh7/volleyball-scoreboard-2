@@ -1,6 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { databaseStorage } from './database-storage.js';
+import { randomUUID } from 'crypto';
+
+// Default user ID for system initialization
+const DEFAULT_USER_ID = randomUUID();
 
 // Initialize default user if needed
 async function initializeDefaultUser() {
@@ -9,7 +13,7 @@ async function initializeDefaultUser() {
     if (!existingUser) {
       const hashedPassword = await hashPassword('password123');
       await databaseStorage.createUser({
-        id: 'default-user-id',
+        id: DEFAULT_USER_ID, // Use consistent UUID
         email: 'admin@volleyscore.com',
         password: hashedPassword,
         name: 'Admin User',
@@ -18,8 +22,8 @@ async function initializeDefaultUser() {
       });
       
       // Initialize default data for this user
-      await databaseStorage.initializeUserData('default-user-id');
-      console.log('✅ Default user initialized');
+      await databaseStorage.initializeUserData(DEFAULT_USER_ID);
+      console.log('✅ Default user initialized with ID:', DEFAULT_USER_ID);
     }
   } catch (error) {
     console.error('Failed to initialize default user:', error);
@@ -28,7 +32,7 @@ async function initializeDefaultUser() {
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '7d';
+const JWT_EXPIRES_IN = '24h'; // Reduce to 24 hours to create shorter tokens
 
 export interface AuthUser {
   id: string;
@@ -60,15 +64,28 @@ export const verifyPassword = async (password: string, hash: string): Promise<bo
 
 // Generate JWT token
 export const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign({ userId }, JWT_SECRET, { 
+    expiresIn: JWT_EXPIRES_IN,
+    algorithm: 'HS256'
+  });
 };
 
 // Verify JWT token
 export const verifyToken = (token: string): { userId: string } | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    console.log('🔍 Verifying JWT token, length:', token.length);
+    console.log('🔍 Token preview:', token.substring(0, 50) + '...');
+    
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { userId: string };
+    console.log('✅ JWT verification successful, userId:', decoded.userId);
     return decoded;
   } catch (error) {
+    console.error('❌ JWT verification failed:', error);
+    console.error('❌ Error type:', error.constructor.name);
+    console.error('❌ Error message:', error.message);
+    if (error.stack) {
+      console.error('❌ Error stack:', error.stack);
+    }
     return null;
   }
 };
@@ -94,7 +111,7 @@ export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
 
         // Create user
         const newUser = await databaseStorage.createUser({
-          id: `user-${Date.now()}`,
+          id: randomUUID(), // Use proper UUID
           email: data.email,
           password: hashedPassword,
           name: data.name,
@@ -124,7 +141,7 @@ export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
 
     const hashedPassword = await hashPassword(data.password);
     const newUser = {
-      id: `user-${Date.now()}`,
+      id: randomUUID(), // Use proper UUID
       email: data.email,
       password: hashedPassword,
       name: data.name,
@@ -187,7 +204,7 @@ export const loginUser = async (credentials: LoginCredentials): Promise<{ user: 
           userId: user.id,
           email: user.email,
           createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours to match JWT
         });
       } else {
         // In-memory session
@@ -195,7 +212,7 @@ export const loginUser = async (credentials: LoginCredentials): Promise<{ user: 
           userId: user.id,
           email: user.email,
           createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours to match JWT
         });
       }
     } catch (sessionError) {
@@ -205,7 +222,7 @@ export const loginUser = async (credentials: LoginCredentials): Promise<{ user: 
         userId: user.id,
         email: user.email,
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours to match JWT
       });
     }
 

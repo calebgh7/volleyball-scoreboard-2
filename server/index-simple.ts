@@ -15,9 +15,16 @@ async function initializeServer() {
   try {
     if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
       console.log('🔄 Initializing database connection...');
+      console.log('🔗 DATABASE_URL found:', (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL)?.replace(/:[^:@]*@/, ':****@'));
+      
       const { initializeDatabase } = await import('./database.js');
-      await initializeDatabase();
-      console.log('✅ Database connection established');
+      const dbInitialized = await initializeDatabase();
+      
+      if (dbInitialized) {
+        console.log('✅ Database connection established and ready');
+      } else {
+        console.log('⚠️ Database connection failed, falling back to in-memory storage');
+      }
     } else {
       console.log('⚠️ No database URL provided, using in-memory storage');
     }
@@ -50,7 +57,7 @@ const storage = {
   templates: new Map(),
   settings: {
     id: 1,
-    userId: "default-user-id",
+    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
     sponsorLogoPath: null,
     sponsorLogoPublicId: null,
     primaryColor: "#1565C0",
@@ -68,7 +75,7 @@ const storage = {
   // Default teams
   const homeTeam = {
     id: 1,
-    userId: "default-user-id",
+    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
     name: "EAGLES",
     location: "Central High",
     logoPath: null,
@@ -84,7 +91,7 @@ const storage = {
   
   const awayTeam = {
     id: 2,
-    userId: "default-user-id",
+    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
     name: "TIGERS", 
     location: "North Valley",
     logoPath: null,
@@ -104,7 +111,7 @@ const storage = {
   // Default match
   const match = {
     id: 1,
-    userId: "default-user-id",
+    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
     name: "Default Match",
     homeTeamId: homeTeam.id,
     awayTeamId: awayTeam.id,
@@ -185,8 +192,35 @@ app.get("/api/auth/me", authenticateToken, (req, res) => {
 });
 
 // API Routes
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+// Health check endpoint
+app.get("/api/health", async (req, res) => {
+  try {
+    // Test database connection if available
+    let dbStatus = 'not_configured';
+    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+      try {
+        const { checkDatabaseHealth } = await import('./database.js');
+        const health = await checkDatabaseHealth();
+        dbStatus = health.status;
+      } catch (error) {
+        dbStatus = 'error';
+        console.error('Database health check failed:', error);
+      }
+    }
+    
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: "error", 
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 app.get("/api/current-match", optionalAuth, async (req, res) => {
