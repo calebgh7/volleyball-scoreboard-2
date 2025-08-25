@@ -23,10 +23,7 @@ async function initializeServer() {
     }
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
-    if (process.env.NODE_ENV === 'production') {
-      throw error;
-    }
-    console.log('🔄 Continuing with in-memory storage for development');
+    console.log('🔄 Continuing with in-memory storage');
   }
 }
 

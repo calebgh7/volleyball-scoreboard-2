@@ -73,32 +73,68 @@ export const verifyToken = (token: string): { userId: string } | null => {
   }
 };
 
+// Fallback in-memory storage for when database is unavailable
+const fallbackUsers = new Map();
+const fallbackSessions = new Map();
+
 // Register new user
 export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
   try {
-    // Check if user already exists
-    const existingUser = await databaseStorage.findUserByEmail(data.email);
-    if (existingUser) {
+    // Try database first
+    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+      try {
+        // Check if user already exists
+        const existingUser = await databaseStorage.findUserByEmail(data.email);
+        if (existingUser) {
+          throw new Error('User with this email already exists');
+        }
+
+        // Hash password
+        const hashedPassword = await hashPassword(data.password);
+
+        // Create user
+        const newUser = await databaseStorage.createUser({
+          id: `user-${Date.now()}`,
+          email: data.email,
+          password: hashedPassword,
+          name: data.name,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+
+        // Initialize default data for the new user
+        await databaseStorage.initializeUserData(newUser.id);
+        
+        console.log(`✅ User registered successfully in database: ${newUser.email}`);
+        return {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+        };
+      } catch (dbError) {
+        console.warn('Database registration failed, falling back to in-memory storage:', dbError);
+        // Fall through to in-memory storage
+      }
+    }
+
+    // Fallback to in-memory storage
+    if (fallbackUsers.has(data.email)) {
       throw new Error('User with this email already exists');
     }
 
-    // Hash password
     const hashedPassword = await hashPassword(data.password);
-
-    // Create user
-    const newUser = await databaseStorage.createUser({
+    const newUser = {
       id: `user-${Date.now()}`,
       email: data.email,
       password: hashedPassword,
       name: data.name,
       createdAt: new Date(),
       updatedAt: new Date()
-    });
+    };
 
-    // Initialize default data for the new user
-    await databaseStorage.initializeUserData(newUser.id);
+    fallbackUsers.set(data.email, newUser);
     
-    console.log(`✅ User registered successfully: ${newUser.email}`);
+    console.log(`✅ User registered successfully in memory: ${newUser.email}`);
     return {
       id: newUser.id,
       email: newUser.email,
@@ -113,8 +149,22 @@ export const registerUser = async (data: RegisterData): Promise<AuthUser> => {
 // Login user
 export const loginUser = async (credentials: LoginCredentials): Promise<{ user: AuthUser; token: string }> => {
   try {
-    // Find user
-    const user = await databaseStorage.findUserByEmail(credentials.email);
+    let user = null;
+
+    // Try database first
+    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+      try {
+        user = await databaseStorage.findUserByEmail(credentials.email);
+      } catch (dbError) {
+        console.warn('Database login failed, trying in-memory storage:', dbError);
+      }
+    }
+
+    // Fallback to in-memory storage
+    if (!user) {
+      user = fallbackUsers.get(credentials.email);
+    }
+
     if (!user) {
       throw new Error('Invalid email or password');
     }
@@ -125,20 +175,39 @@ export const loginUser = async (credentials: LoginCredentials): Promise<{ user: 
       throw new Error('Invalid email or password');
     }
 
-    // Update last login
-    await databaseStorage.updateUser(user.id, { lastLogin: new Date() });
-
     // Generate token
     const token = generateToken(user.id);
 
-    // Store session
-    await databaseStorage.createSession({
-      token,
-      userId: user.id,
-      email: user.email,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-    });
+    // Try to store session in database, fallback to memory
+    try {
+      if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+        await databaseStorage.updateUser(user.id, { lastLogin: new Date() });
+        await databaseStorage.createSession({
+          token,
+          userId: user.id,
+          email: user.email,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        });
+      } else {
+        // In-memory session
+        fallbackSessions.set(token, {
+          userId: user.id,
+          email: user.email,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+      }
+    } catch (sessionError) {
+      console.warn('Session storage failed, using in-memory:', sessionError);
+      // Fallback to in-memory session
+      fallbackSessions.set(token, {
+        userId: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      });
+    }
 
     console.log(`✅ User logged in successfully: ${user.email}`);
     return {
@@ -163,20 +232,44 @@ export const authenticateUser = async (token: string): Promise<AuthUser | null> 
       return null;
     }
 
-    const session = await databaseStorage.findSession(token);
+    let session = null;
+    let user = null;
+
+    // Try database first
+    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+      try {
+        session = await databaseStorage.findSession(token);
+        if (session) {
+          user = await databaseStorage.findUserById(decoded.userId);
+        }
+      } catch (dbError) {
+        console.warn('Database authentication failed, trying in-memory storage:', dbError);
+      }
+    }
+
+    // Fallback to in-memory storage
     if (!session) {
+      session = fallbackSessions.get(token);
+      if (session) {
+        user = fallbackUsers.get(session.email);
+      }
+    }
+
+    if (!session || !user) {
       return null;
     }
 
     // Check if session is expired
     if (session.expiresAt && new Date() > session.expiresAt) {
-      await databaseStorage.deleteSession(token);
-      return null;
-    }
-
-    // Find user
-    const user = await databaseStorage.findUserById(decoded.userId);
-    if (!user) {
+      try {
+        if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+          await databaseStorage.deleteSession(token);
+        } else {
+          fallbackSessions.delete(token);
+        }
+      } catch (deleteError) {
+        console.warn('Failed to delete expired session:', deleteError);
+      }
       return null;
     }
 
@@ -194,8 +287,23 @@ export const authenticateUser = async (token: string): Promise<AuthUser | null> 
 // Logout user
 export const logoutUser = async (token: string): Promise<boolean> => {
   try {
-    await databaseStorage.deleteSession(token);
-    return true;
+    let deleted = false;
+
+    // Try database first
+    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
+      try {
+        deleted = await databaseStorage.deleteSession(token);
+      } catch (dbError) {
+        console.warn('Database logout failed, trying in-memory storage:', dbError);
+      }
+    }
+
+    // Fallback to in-memory storage
+    if (!deleted) {
+      deleted = fallbackSessions.delete(token);
+    }
+
+    return deleted;
   } catch (error) {
     console.error('❌ Logout failed:', error);
     return false;
