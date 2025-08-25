@@ -167,7 +167,7 @@ export class MemStorage implements IStorage {
     const team = this.teams.get(id);
     if (!team) return undefined;
     
-    const updatedTeam = { ...team, ...teamUpdate, updatedAt: new Date() };
+    const updatedTeam: Team = { ...team, ...teamUpdate, updatedAt: new Date() };
     this.teams.set(id, updatedTeam);
     return updatedTeam;
   }
@@ -205,7 +205,7 @@ export class MemStorage implements IStorage {
     const match = this.matches.get(id);
     if (!match) return undefined;
     
-    const updatedMatch = { ...match, ...matchUpdate, updatedAt: new Date() };
+    const updatedMatch: Match = { ...match, ...matchUpdate, updatedAt: new Date() };
     this.matches.set(id, updatedMatch);
     return updatedMatch;
   }
@@ -237,7 +237,7 @@ export class MemStorage implements IStorage {
     const state = this.gameStates.get(matchId);
     if (!state) return undefined;
     
-    const updatedState = { ...state, ...stateUpdate, updatedAt: new Date() };
+    const updatedState: GameState = { ...state, ...stateUpdate, updatedAt: new Date() };
     this.gameStates.set(matchId, updatedState);
     return updatedState;
   }
