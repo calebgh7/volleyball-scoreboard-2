@@ -4,10 +4,11 @@ import ScoreboardDisplay from "@/components/scoreboard-display";
 import ControlPanel from "@/components/control-panel";
 import SettingsModal from "@/components/settings-modal";
 import { TemplateManager } from "@/components/template-manager";
+import { TeamManager } from "@/components/team-manager";
 import { LogoutButton } from "@/components/logout-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Settings, Tv, FolderOpen } from "lucide-react";
+import { Settings, Tv, FolderOpen, Users } from "lucide-react";
 
 interface ScoreboardProps {
   user: any;
@@ -19,6 +20,7 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
   const [isOverlayMode, setIsOverlayMode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
+  const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
 
   const { data: currentMatch, isLoading } = useQuery({
     queryKey: ['/api/current-match'],
@@ -89,6 +91,13 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
                 Templates
               </Button>
               <Button 
+                onClick={() => setIsTeamManagerOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Teams
+              </Button>
+              <Button 
                 onClick={openOverlayWindow}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
@@ -124,6 +133,8 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
 
       {/* Settings Modal */}
       <SettingsModal 
+        user={user}
+        token={token}
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />
@@ -145,6 +156,14 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Team Manager Modal */}
+      <TeamManager
+        user={user}
+        token={token}
+        isOpen={isTeamManagerOpen}
+        onClose={() => setIsTeamManagerOpen(false)}
+      />
     </div>
   );
 }
