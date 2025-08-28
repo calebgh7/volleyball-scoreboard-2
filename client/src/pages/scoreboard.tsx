@@ -24,7 +24,9 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
 
   const { data: currentMatch, isLoading } = useQuery({
     queryKey: ['/api/current-match'],
-    refetchInterval: 1000, // Real-time updates
+    refetchInterval: false, // Disable automatic refetching to prevent page refreshes
+    staleTime: 30000, // Data is fresh for 30 seconds
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
   const openOverlayWindow = () => {
