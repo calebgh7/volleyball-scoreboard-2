@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from 'cloudinary';
+const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
 cloudinary.config({
@@ -25,7 +25,7 @@ export default function handler(req, res) {
     return res.status(200).json({ 
       message: 'Serverless function working with Cloudinary!', 
       timestamp: new Date().toISOString(),
-      version: '3.0.0',
+      version: '3.0.1',
       method: req.method,
       url: req.url
     });
@@ -37,7 +37,7 @@ export default function handler(req, res) {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       message: 'Serverless function healthy with Cloudinary!',
-      version: '3.0.0'
+      version: '3.0.1'
     });
   }
 
@@ -135,7 +135,7 @@ export default function handler(req, res) {
         return res.status(400).json({ error: 'Image data and filename are required' });
       }
 
-      if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      if (!process.env.CLOUDINARY_API_KEY) {
         return res.status(500).json({ error: 'Cloudinary not configured' });
       }
 
@@ -182,7 +182,7 @@ export default function handler(req, res) {
     try {
       const publicId = req.url.split('/').pop();
       
-      if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      if (!process.env.CLOUDINARY_API_KEY) {
         return res.status(500).json({ error: 'Cloudinary not configured' });
       }
 
