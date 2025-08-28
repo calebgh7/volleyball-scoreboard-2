@@ -213,7 +213,9 @@ export default async function handler(req, res) {
   // Image deletion endpoint
   if (req.method === 'DELETE' && req.url.startsWith('/api/upload/')) {
     try {
-      const publicId = req.url.split('/').pop();
+      // Extract the public ID from the URL path
+      const pathParts = req.url.split('/');
+      const publicId = pathParts.slice(3).join('/'); // Skip /api/upload/
       
       if (!process.env.CLOUDINARY_CLOUD_NAME) {
         return res.status(200).json({ 
