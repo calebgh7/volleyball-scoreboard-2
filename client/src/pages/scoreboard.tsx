@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ScoreboardDisplay from "@/components/scoreboard-display";
 import ControlPanel from "@/components/control-panel";
-import SettingsModal from "@/components/settings-modal";
+import { SettingsModal } from "@/components/settings-modal";
 import { TemplateManager } from "@/components/template-manager";
 import { TeamManager } from "@/components/team-manager";
 import { LogoutButton } from "@/components/logout-button";
