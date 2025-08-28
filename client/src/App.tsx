@@ -1,66 +1,76 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-import Scoreboard from "./pages/scoreboard";
-import CloudinaryTest from "./components/cloudinary-test";
-import TeamEditTest from "./components/team-edit-test";
-import SimpleTest from "./components/simple-test";
-import BasicInputTest from "./components/basic-input-test";
-import MinimalTest from "./components/minimal-test";
-import StandaloneTest from "./components/standalone-test";
-import { useEffect } from "react";
-import type { Settings } from "@shared/schema";
+import { useState } from "react";
 
-function SettingsLoader() {
-  const { data: settings } = useQuery<Settings>({
-    queryKey: ['/api/settings'],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+export default function App() {
+  const [testInput, setTestInput] = useState("Test Input");
+  const [testCount, setTestCount] = useState(0);
 
-  useEffect(() => {
-    if (settings?.primaryColor && settings?.accentColor) {
-      const root = document.documentElement;
-      root.style.setProperty('--primary', settings.primaryColor);
-      root.style.setProperty('--accent', settings.accentColor);
+  console.log("🔧 App component rendering!");
+
+  return (
+    <div style={{ padding: "40px", fontFamily: "Arial, sans-serif" }}>
+      <h1 style={{ color: "red", textAlign: "center", marginBottom: "40px" }}>
+        🚨 MINIMAL REACT TEST 🚨
+      </h1>
       
-      // Update CSS custom properties for scoreboard colors
-      root.style.setProperty('--color-primary', settings.primaryColor);
-      root.style.setProperty('--color-accent', settings.accentColor);
-      root.style.setProperty('--color-secondary', settings.accentColor);
-    }
-  }, [settings]);
+      <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", marginBottom: "30px" }}>
+        <h2 style={{ color: "#495057", marginBottom: "20px" }}>Test 1: Input Field</h2>
+        <input
+          type="text"
+          value={testInput}
+          onChange={(e) => {
+            console.log("🔧 Input changed to:", e.target.value);
+            setTestInput(e.target.value);
+          }}
+          style={{ padding: "15px", fontSize: "18px", border: "2px solid #007bff", borderRadius: "5px", width: "100%", marginBottom: "10px" }}
+          placeholder="Type here to test React input functionality"
+        />
+        <p style={{ fontSize: "16px", color: "#6c757d" }}>
+          <strong>Current value:</strong> <span style={{ color: "#28a745" }}>{testInput}</span>
+        </p>
+      </div>
 
-  return null;
-}
+      <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", marginBottom: "30px" }}>
+        <h2 style={{ color: "#495057", marginBottom: "20px" }}>Test 2: Button Click</h2>
+        <button
+          onClick={() => {
+            console.log("🔧 Button clicked! Count:", testCount + 1);
+            setTestCount(testCount + 1);
+          }}
+          style={{ padding: "15px 30px", fontSize: "18px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", marginBottom: "10px" }}
+        >
+          Click Me! (Count: {testCount})
+        </button>
+        <p style={{ fontSize: "16px", color: "#6c757d" }}>
+          <strong>Total clicks:</strong> <span style={{ color: "#28a745" }}>{testCount}</span>
+        </p>
+      </div>
 
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={() => <Scoreboard user={{}} token="" onLogout={() => {}} />} />
-      <Route path="/cloudinary-test" component={CloudinaryTest} />
-      <Route path="/team-edit-test" component={TeamEditTest} />
-      <Route path="/simple-test" component={SimpleTest} />
-      <Route path="/basic-input-test" component={BasicInputTest} />
-      <Route path="/minimal-test" component={MinimalTest} />
-      <Route path="/standalone-test" component={StandaloneTest} />
-      <Route component={NotFound} />
-    </Switch>
+      <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", marginBottom: "30px" }}>
+        <h2 style={{ color: "#495057", marginBottom: "20px" }}>Test 3: State Display</h2>
+        <div style={{ backgroundColor: "#e9ecef", padding: "20px", borderRadius: "5px", fontFamily: "monospace", fontSize: "14px" }}>
+          <p><strong>Input Value:</strong> "{testInput}"</p>
+          <p><strong>Button Clicks:</strong> {testCount}</p>
+          <p><strong>Timestamp:</strong> {new Date().toLocaleTimeString()}</p>
+        </div>
+      </div>
+
+      <div style={{ backgroundColor: "#fff3cd", border: "1px solid #ffeaa7", borderRadius: "5px", padding: "20px", textAlign: "center" }}>
+        <h3 style={{ color: "#856404", marginBottom: "15px" }}>🧪 Instructions</h3>
+        <ol style={{ textAlign: "left", color: "#856404" }}>
+          <li><strong>Type in the input field</strong> - the text below should update immediately</li>
+          <li><strong>Click the button</strong> - the count should increase</li>
+          <li><strong>Check the browser console</strong> (F12 → Console) for debug logs</li>
+          <li><strong>If both work</strong> - React is functioning correctly</li>
+          <li><strong>If neither works</strong> - React is completely broken</li>
+        </ol>
+      </div>
+
+      <div style={{ backgroundColor: "#d1ecf1", border: "1px solid #bee5eb", borderRadius: "5px", padding: "20px", marginTop: "30px", textAlign: "center" }}>
+        <h3 style={{ color: "#0c5460" }}>🔍 Debug Information</h3>
+        <p style={{ color: "#0c5460", fontSize: "14px" }}>
+          Build Time: {new Date().toISOString()} | User Agent: {navigator.userAgent}
+        </p>
+      </div>
+    </div>
   );
 }
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SettingsLoader />
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-}
-
-export default App;
