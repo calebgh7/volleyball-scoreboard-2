@@ -44,6 +44,173 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
     setIsTemplateManagerOpen(false);
   };
 
+  // Team update function
+  const handleTeamUpdate = async (team: 'home' | 'away', field: string, value: string) => {
+    try {
+      const teamId = team === 'home' ? currentMatch?.homeTeam?.id : currentMatch?.awayTeam?.id;
+      if (!teamId) return;
+
+      const response = await fetch(`/api/teams/${teamId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [field]: value }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated team information
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log(`Team ${team} ${field} updated to:`, value);
+      }
+    } catch (error) {
+      console.error('Failed to update team:', error);
+    }
+  };
+
+  // Score update function
+  const handleScoreUpdate = async (team: 'home' | 'away', increment: boolean) => {
+    try {
+      const currentScore = team === 'home' ? currentMatch?.gameState?.homeScore : currentMatch?.gameState?.awayScore;
+      const newScore = increment ? (currentScore || 0) + 1 : Math.max(0, (currentScore || 0) - 1);
+
+      const response = await fetch('/api/scores', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          matchId: currentMatch?.match?.id,
+          homeScore: team === 'home' ? newScore : currentMatch?.gameState?.homeScore,
+          awayScore: team === 'away' ? newScore : currentMatch?.gameState?.awayScore,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated scores
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log(`Score updated for ${team} team:`, newScore);
+      }
+    } catch (error) {
+      console.error('Failed to update score:', error);
+    }
+  };
+
+  // Sets won update function
+  const handleSetsWonUpdate = async (team: 'home' | 'away', value: number) => {
+    try {
+      const response = await fetch(`/api/matches/${currentMatch?.match?.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          [team === 'home' ? 'homeSetsWon' : 'awaySetsWon']: value,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated sets
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log(`Sets won updated for ${team} team:`, value);
+      }
+    } catch (error) {
+      console.error('Failed to update sets won:', error);
+    }
+  };
+
+  // Logo update function
+  const handleLogoUpdate = async (teamId: number, logoUrl: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ logoPath: logoUrl }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated logo
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log(`Logo updated for team ${teamId}:`, logoUrl);
+      }
+    } catch (error) {
+      console.error('Failed to update logo:', error);
+    }
+  };
+
+  // Match format update function
+  const handleMatchFormatUpdate = async (format: number) => {
+    try {
+      const response = await fetch(`/api/matches/${currentMatch?.match?.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ format }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated format
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log(`Match format updated to:`, format);
+      }
+    } catch (error) {
+      console.error('Failed to update match format:', error);
+    }
+  };
+
+  // Complete set function
+  const handleCompleteSet = async () => {
+    try {
+      const response = await fetch('/api/sets/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          matchId: currentMatch?.match?.id,
+          homeScore: currentMatch?.gameState?.homeScore,
+          awayScore: currentMatch?.gameState?.awayScore,
+          setNumber: currentMatch?.match?.currentSet,
+          setHistory: currentMatch?.match?.setHistory || [],
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated set information
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log('Set completed successfully');
+      }
+    } catch (error) {
+      console.error('Failed to complete set:', error);
+    }
+  };
+
+  // Reset set function
+  const handleResetSet = async () => {
+    try {
+      const response = await fetch('/api/scores/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          matchId: currentMatch?.match?.id,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show reset scores
+        queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+        console.log('Set scores reset successfully');
+      }
+    } catch (error) {
+      console.error('Failed to reset set:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -132,7 +299,16 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
           
           {/* Control Panel */}
           <div>
-            <ControlPanel data={currentMatch} />
+            <ControlPanel 
+              data={currentMatch}
+              onScoreUpdate={handleScoreUpdate}
+              onTeamUpdate={handleTeamUpdate}
+              onSetsWonUpdate={handleSetsWonUpdate}
+              onLogoUpdate={handleLogoUpdate}
+              onMatchFormatUpdate={handleMatchFormatUpdate}
+              onCompleteSet={handleCompleteSet}
+              onResetSet={handleResetSet}
+            />
           </div>
         </div>
       </main>
