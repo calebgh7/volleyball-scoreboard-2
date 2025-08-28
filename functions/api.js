@@ -110,6 +110,50 @@ export default async function handler(req, res) {
     }
   }
 
+  // Teams endpoint to get team information
+  if (req.method === 'GET' && req.url.startsWith('/api/teams/')) {
+    try {
+      const teamId = req.url.split('/').pop();
+      
+      // Return mock team data based on ID
+      let teamData = null;
+      if (teamId === 'home-team-1') {
+        teamData = {
+          id: 'home-team-1',
+          name: 'Home Team',
+          logoPath: null,
+          colorScheme: 'pink',
+          customColor: null,
+          customTextColor: null,
+          customSetBackgroundColor: null
+        };
+      } else if (teamId === 'away-team-1') {
+        teamData = {
+          id: 'away-team-1',
+          name: 'Away Team',
+          logoPath: null,
+          colorScheme: 'cyan',
+          customColor: null,
+          customTextColor: null,
+          customSetBackgroundColor: null
+        };
+      }
+      
+      if (teamData) {
+        return res.status(200).json(teamData);
+      } else {
+        return res.status(404).json({ error: 'Team not found' });
+      }
+    } catch (error) {
+      console.error('Team fetch failed:', error);
+      return res.status(500).json({ 
+        error: 'Team fetch failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
   // Match update endpoint
   if (req.method === 'PATCH' && req.url.startsWith('/api/matches/')) {
     try {

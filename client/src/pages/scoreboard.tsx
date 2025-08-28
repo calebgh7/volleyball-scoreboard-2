@@ -50,6 +50,8 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
       const teamId = team === 'home' ? currentMatch?.homeTeam?.id : currentMatch?.awayTeam?.id;
       if (!teamId) return;
 
+      console.log(`Updating ${team} team ${field} to:`, value, 'Team ID:', teamId);
+
       const response = await fetch(`/api/teams/${teamId}`, {
         method: 'PATCH',
         headers: {
@@ -62,6 +64,9 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
         // Refresh the data to show updated team information
         queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
         console.log(`Team ${team} ${field} updated to:`, value);
+      } else {
+        const errorData = await response.json();
+        console.error('Team update failed:', errorData);
       }
     } catch (error) {
       console.error('Failed to update team:', error);
@@ -120,7 +125,7 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
   };
 
   // Logo update function
-  const handleLogoUpdate = async (teamId: number, logoUrl: string) => {
+  const handleLogoUpdate = async (teamId: string, logoUrl: string) => {
     try {
       const response = await fetch(`/api/teams/${teamId}`, {
         method: 'PATCH',

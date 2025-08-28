@@ -34,7 +34,6 @@ interface ControlPanelProps {
       name: string;
       logoPath?: string;
       colorScheme: string;
-      customColor?: string;
       customTextColor?: string;
       customSetBackgroundColor?: string;
     };
@@ -51,7 +50,7 @@ interface ControlPanelProps {
   onScoreUpdate?: (team: 'home' | 'away', increment: boolean) => void;
   onTeamUpdate?: (team: 'home' | 'away', field: string, value: string) => void;
   onSetsWonUpdate?: (team: 'home' | 'away', value: number) => void;
-  onLogoUpdate?: (teamId: number, logoUrl: string) => void;
+  onLogoUpdate?: (teamId: string, logoUrl: string) => void;
   onMatchFormatUpdate?: (format: number) => void;
   onCompleteSet?: () => void;
   onResetSet?: () => void;
@@ -167,10 +166,25 @@ export default function ControlPanel({
     }
   };
 
-  const handleTeamUpdate = async (teamId: number, field: string, value: string) => {
+  const handleTeamUpdate = async (teamId: string, field: string, value: string) => {
     try {
-      // Determine which team this is (home or away)
-      const team = teamId === homeTeam?.id ? 'home' : 'away';
+      // Determine which team this is (home or away) based on the teamId
+      let team: 'home' | 'away';
+      if (teamId === homeTeam?.id) {
+        team = 'home';
+      } else if (teamId === awayTeam?.id) {
+        team = 'away';
+      } else {
+        console.error('Unknown team ID:', teamId);
+        toast({
+          title: "Error",
+          description: "Unknown team ID",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log(`Updating ${team} team ${field} to:`, value, 'Team ID:', teamId);
       
       if (onTeamUpdate) {
         onTeamUpdate(team, field, value);
