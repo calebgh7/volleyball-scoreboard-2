@@ -509,7 +509,7 @@ export default function ControlPanel({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Home Team</Label>
                 <Input 
                   value={homeTeam?.name || ''}
-                  onChange={(e) => handleTeamUpdate(homeTeam?.id, 'name', e.target.value)}
+                  onChange={(e) => onTeamUpdate && onTeamUpdate('home', 'name', e.target.value)}
                   placeholder="Team Name"
                   className="mb-2"
                 />
@@ -523,7 +523,7 @@ export default function ControlPanel({
                     <Label className="text-xs text-gray-500 mb-1 block">Preset</Label>
                     <Select 
                       value={homeTeam?.colorScheme || 'pink'} 
-                      onValueChange={(value) => handleTeamUpdate(homeTeam?.id, 'colorScheme', value)}
+                      onValueChange={(value) => onTeamUpdate && onTeamUpdate('home', 'colorScheme', value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -563,7 +563,7 @@ export default function ControlPanel({
                         type="text"
                         placeholder="#FF0000"
                         value={homeTeam?.customColor || ''}
-                        onChange={(e) => handleTeamUpdate(homeTeam?.id, 'customColor', e.target.value)}
+                        onChange={(e) => onTeamUpdate && onTeamUpdate('home', 'customColor', e.target.value)}
                         className="font-mono text-sm flex-1"
                         disabled={homeTeam?.colorScheme !== 'custom'}
                       />
@@ -585,7 +585,7 @@ export default function ControlPanel({
                         type="text"
                         placeholder="#FFFFFF"
                         value={homeTeam?.customTextColor || '#FFFFFF'}
-                        onChange={(e) => handleTeamUpdate(homeTeam?.id, 'customTextColor', e.target.value)}
+                        onChange={(e) => onTeamUpdate && onTeamUpdate('home', 'customTextColor', e.target.value)}
                         className="font-mono text-sm flex-1"
                       />
                     </div>
@@ -606,7 +606,7 @@ export default function ControlPanel({
                         type="text"
                         placeholder="#000000"
                         value={homeTeam?.customSetBackgroundColor || '#000000'}
-                        onChange={(e) => handleTeamUpdate(homeTeam?.id, 'customSetBackgroundColor', e.target.value)}
+                        onChange={(e) => onTeamUpdate && onTeamUpdate('home', 'customSetBackgroundColor', e.target.value)}
                         className="font-mono text-sm flex-1"
                       />
                     </div>
@@ -615,9 +615,10 @@ export default function ControlPanel({
               </div>
               
               <LogoUpload 
-                teamId={homeTeam?.id} 
+                teamId={homeTeam?.id || 'home-team-1'} 
                 currentLogo={homeTeam?.logoPath}
                 label="Home Logo"
+                onLogoChange={(logoUrl) => onLogoUpdate && onLogoUpdate(homeTeam?.id || 'home-team-1', logoUrl)}
               />
             </div>
             
@@ -627,7 +628,7 @@ export default function ControlPanel({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Away Team</Label>
                 <Input 
                   value={awayTeam?.name || ''}
-                  onChange={(e) => handleTeamUpdate(awayTeam?.id, 'name', e.target.value)}
+                  onChange={(e) => onTeamUpdate && onTeamUpdate('away', 'name', e.target.value)}
                   placeholder="Team Name"
                   className="mb-2"
                 />
@@ -641,7 +642,7 @@ export default function ControlPanel({
                     <Label className="text-xs text-gray-500 mb-1 block">Preset</Label>
                     <Select 
                       value={awayTeam?.colorScheme || 'cyan'} 
-                      onValueChange={(value) => handleTeamUpdate(awayTeam?.id, 'colorScheme', value)}
+                      onValueChange={(value) => onTeamUpdate && onTeamUpdate('away', 'colorScheme', value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -681,7 +682,7 @@ export default function ControlPanel({
                         type="text"
                         placeholder="#00FF00"
                         value={awayTeam?.customColor || ''}
-                        onChange={(e) => handleTeamUpdate(awayTeam?.id, 'customColor', e.target.value)}
+                        onChange={(e) => onTeamUpdate && onTeamUpdate('away', 'customColor', e.target.value)}
                         className="font-mono text-sm flex-1"
                         disabled={awayTeam?.colorScheme !== 'custom'}
                       />
@@ -703,7 +704,7 @@ export default function ControlPanel({
                         type="text"
                         placeholder="#FFFFFF"
                         value={awayTeam?.customTextColor || '#FFFFFF'}
-                        onChange={(e) => handleTeamUpdate(awayTeam?.id, 'customTextColor', e.target.value)}
+                        onChange={(e) => onTeamUpdate && onTeamUpdate('away', 'customTextColor', e.target.value)}
                         className="font-mono text-sm flex-1"
                       />
                     </div>
@@ -724,7 +725,7 @@ export default function ControlPanel({
                         type="text"
                         placeholder="#000000"
                         value={awayTeam?.customSetBackgroundColor || '#000000'}
-                        onChange={(e) => handleTeamUpdate(awayTeam?.id, 'customSetBackgroundColor', e.target.value)}
+                        onChange={(e) => onTeamUpdate && onTeamUpdate('away', 'customSetBackgroundColor', e.target.value)}
                         className="font-mono text-sm flex-1"
                       />
                     </div>
@@ -733,9 +734,10 @@ export default function ControlPanel({
               </div>
               
               <LogoUpload 
-                teamId={awayTeam?.id} 
+                teamId={awayTeam?.id || 'away-team-1'} 
                 currentLogo={awayTeam?.logoPath}
                 label="Away Logo"
+                onLogoChange={(logoUrl) => onLogoUpdate && onLogoUpdate(awayTeam?.id || 'away-team-1', logoUrl)}
               />
             </div>
           </div>
