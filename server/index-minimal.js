@@ -92,7 +92,11 @@ app.delete('/api/upload/:publicId', async (req, res) => {
 
 // Test endpoint
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'Minimal server is working! (JS version)' });
+  res.json({ 
+    message: 'Minimal server is working! (JS version)', 
+    timestamp: new Date().toISOString(),
+    version: '1.0.1'
+  });
 });
 
 // Start server
