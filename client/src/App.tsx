@@ -10,6 +10,7 @@ import TeamEditTest from "./components/team-edit-test";
 import SimpleTest from "./components/simple-test";
 import BasicInputTest from "./components/basic-input-test";
 import MinimalTest from "./components/minimal-test";
+import StandaloneTest from "./components/standalone-test";
 import { useEffect } from "react";
 import type { Settings } from "@shared/schema";
 
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/simple-test" component={SimpleTest} />
       <Route path="/basic-input-test" component={BasicInputTest} />
       <Route path="/minimal-test" component={MinimalTest} />
+      <Route path="/standalone-test" component={StandaloneTest} />
       <Route component={NotFound} />
     </Switch>
   );
