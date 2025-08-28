@@ -8,6 +8,8 @@ import Scoreboard from "./pages/scoreboard";
 import CloudinaryTest from "./components/cloudinary-test";
 import TeamEditTest from "./components/team-edit-test";
 import SimpleTest from "./components/simple-test";
+import BasicInputTest from "./components/basic-input-test";
+import MinimalTest from "./components/minimal-test";
 import { useEffect } from "react";
 import type { Settings } from "@shared/schema";
 
@@ -40,6 +42,8 @@ function Router() {
       <Route path="/cloudinary-test" component={CloudinaryTest} />
       <Route path="/team-edit-test" component={TeamEditTest} />
       <Route path="/simple-test" component={SimpleTest} />
+      <Route path="/basic-input-test" component={BasicInputTest} />
+      <Route path="/minimal-test" component={MinimalTest} />
       <Route component={NotFound} />
     </Switch>
   );
