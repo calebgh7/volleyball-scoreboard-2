@@ -146,16 +146,19 @@ export default function ControlPanel({
       console.log('🎯 Starting set completion...');
       console.log('🎯 Current data:', { match, gameState });
       
-      // Assuming completeSet is a function that updates the backend
-      // This part of the logic needs to be adapted to your backend endpoint
-      // For now, we'll just toast and invalidate queries
-      toast({
-        title: "Success",
-        description: "Set completed"
-      });
-      
-      // Refresh the data to show updated set information
-      queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
+      if (onCompleteSet) {
+        onCompleteSet();
+        toast({
+          title: "Success",
+          description: "Set completed"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Complete set function not available",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('❌ Error in handleCompleteSet:', error);
       toast({
