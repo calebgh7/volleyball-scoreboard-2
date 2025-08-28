@@ -22,6 +22,79 @@ export default async function handler(req, res) {
     });
   }
 
+  // Login endpoint
+  if (req.method === 'POST' && req.url === '/api/auth/login') {
+    try {
+      const { email, password } = req.body;
+      
+      console.log('Login attempt for:', email);
+      
+      // Demo login - accept the demo credentials
+      if (email === 'test@example.com' && password === 'password123') {
+        return res.status(200).json({
+          success: true,
+          message: 'Login successful',
+          user: {
+            id: 'demo-user-1',
+            email: 'test@example.com',
+            name: 'Demo User',
+            role: 'admin'
+          },
+          token: 'demo-jwt-token-' + Date.now()
+        });
+      }
+      
+      // For now, accept any login for testing
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful (demo mode)',
+        user: {
+          id: 'user-' + Date.now(),
+          email: email,
+          name: email.split('@')[0],
+          role: 'user'
+        },
+        token: 'demo-jwt-token-' + Date.now()
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Login failed',
+        error: error.message
+      });
+    }
+  }
+
+  // Register endpoint
+  if (req.method === 'POST' && req.url === '/api/auth/register') {
+    try {
+      const { email, password, name } = req.body;
+      
+      console.log('Register attempt for:', email);
+      
+      // For now, just return success for any registration
+      return res.status(200).json({
+        success: true,
+        message: 'Registration successful (demo mode)',
+        user: {
+          id: 'user-' + Date.now(),
+          email: email,
+          name: name || email.split('@')[0],
+          role: 'user'
+        },
+        token: 'demo-jwt-token-' + Date.now()
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Registration failed',
+        error: error.message
+      });
+    }
+  }
+
   // Health endpoint
   if (req.method === 'GET' && req.url === '/api/health') {
     return res.status(200).json({
