@@ -2,11 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "server/index-minimal.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/**/*", "shared/**/*"]
-      }
+      "src": "server/index-minimal.js",
+      "use": "@vercel/node"
     },
     {
       "src": "package.json",
@@ -19,7 +16,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server/index-minimal.ts"
+      "dest": "/server/index-minimal.js"
     },
     {
       "src": "/(.*)",

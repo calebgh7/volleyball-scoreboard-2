@@ -21,7 +21,7 @@
     "build": "vite build",
     "build:server": "tsc -p server/tsconfig.json",
     "vercel-build": "npm run build:server && vite build --outDir dist/public",
-    "start": "NODE_ENV=production node dist/server/index-simple.js",
+    "start": "NODE_ENV=production node dist/server/index-minimal.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx server/database.ts",
