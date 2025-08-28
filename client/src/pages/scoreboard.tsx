@@ -170,7 +170,7 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
       });
 
       if (response.ok) {
-        // Refresh the data to show updated sets
+        // Refresh the data to show updated sets won
         queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
         console.log(`Sets won updated for ${team} team:`, value);
       }
@@ -388,7 +388,7 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
               </Button>
               <Button 
                 onClick={() => setIsTeamManagerOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="bg-indigo-600 hover:bg-blue-700 text-white"
               >
                 <Users className="mr-2 h-4 w-4" />
                 Teams
