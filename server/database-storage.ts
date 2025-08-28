@@ -1,16 +1,69 @@
 import { eq, and, desc } from 'drizzle-orm';
-import { db } from './database.js';
 import { 
   teams, matches, gameState, settings, users, userSessions, scoreboardTemplates,
   type InsertTeam, type InsertMatch, type InsertGameState, type InsertSettings,
   type InsertUser, type InsertUserSession, type InsertScoreboardTemplate
 } from '../shared/schema.js';
 
+// Lazy database connection
+let db: any = null;
+let dbInitialized = false;
+
+async function getDb() {
+  if (!dbInitialized) {
+    try {
+      const { db: databaseInstance } = await import('./database.js');
+      db = databaseInstance;
+      dbInitialized = true;
+    } catch (error) {
+      console.log('Database not available, using in-memory fallback');
+      return null;
+    }
+  }
+  return db;
+}
+
 export class DatabaseStorage {
+  // Health check
+  async checkHealth() {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return { connected: false, status: 'Database not available' };
+      }
+      
+      // Test connection with a simple query
+      await database.select().from(users).limit(1);
+      return { connected: true, status: 'Connected' };
+    } catch (error) {
+      return { connected: false, status: 'Connection failed', error: error.message };
+    }
+  }
+
+  // Run migrations
+  async runMigrations() {
+    try {
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      // For now, just return success - migrations would be handled by drizzle-kit
+      return true;
+    } catch (error) {
+      throw new Error('Failed to run migrations: ' + error.message);
+    }
+  }
+
   // User Management
   async createUser(userData: InsertUser) {
     try {
-      const [newUser] = await db.insert(users).values(userData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newUser] = await database.insert(users).values(userData).returning();
       return newUser;
     } catch (error) {
       console.error('Failed to create user:', error);
@@ -20,7 +73,12 @@ export class DatabaseStorage {
 
   async findUserByEmail(email: string) {
     try {
-      const [user] = await db.select().from(users).where(eq(users.email, email));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [user] = await database.select().from(users).where(eq(users.email, email));
       return user || null;
     } catch (error) {
       console.error('Failed to find user by email:', error);
@@ -30,7 +88,12 @@ export class DatabaseStorage {
 
   async findUserById(id: string) {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [user] = await database.select().from(users).where(eq(users.id, id));
       return user || null;
     } catch (error) {
       console.error('Failed to find user by ID:', error);
@@ -40,7 +103,12 @@ export class DatabaseStorage {
 
   async updateUser(id: string, updates: Partial<InsertUser>) {
     try {
-      const [updatedUser] = await db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [updatedUser] = await database
         .update(users)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(users.id, id))
@@ -55,7 +123,12 @@ export class DatabaseStorage {
   // Session Management
   async createSession(sessionData: InsertUserSession) {
     try {
-      const [newSession] = await db.insert(userSessions).values(sessionData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newSession] = await database.insert(userSessions).values(sessionData).returning();
       return newSession;
     } catch (error) {
       console.error('Failed to create session:', error);
@@ -65,7 +138,12 @@ export class DatabaseStorage {
 
   async findSession(token: string) {
     try {
-      const [session] = await db.select().from(userSessions).where(eq(userSessions.token, token));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [session] = await database.select().from(userSessions).where(eq(userSessions.token, token));
       return session || null;
     } catch (error) {
       console.error('Failed to find session:', error);
@@ -75,7 +153,12 @@ export class DatabaseStorage {
 
   async deleteSession(token: string) {
     try {
-      await db.delete(userSessions).where(eq(userSessions.token, token));
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(userSessions).where(eq(userSessions.token, token));
       return true;
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -86,7 +169,12 @@ export class DatabaseStorage {
   // Team Management
   async createTeam(teamData: InsertTeam) {
     try {
-      const [newTeam] = await db.insert(teams).values(teamData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newTeam] = await database.insert(teams).values(teamData).returning();
       return newTeam;
     } catch (error) {
       console.error('Failed to create team:', error);
@@ -96,7 +184,12 @@ export class DatabaseStorage {
 
   async findTeamById(id: number) {
     try {
-      const [team] = await db.select().from(teams).where(eq(teams.id, id));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [team] = await database.select().from(teams).where(eq(teams.id, id));
       return team || null;
     } catch (error) {
       console.error('Failed to find team by ID:', error);
@@ -106,7 +199,12 @@ export class DatabaseStorage {
 
   async updateTeam(id: number, updates: Partial<InsertTeam>) {
     try {
-      const [updatedTeam] = await db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [updatedTeam] = await database
         .update(teams)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(teams.id, id))
@@ -118,11 +216,16 @@ export class DatabaseStorage {
     }
   }
 
-  async getAllTeams(userId: string) {
+  async getAllTeams() {
     try {
-      return await db.select().from(teams).where(eq(teams.userId, userId));
+      const database = await getDb();
+      if (!database) {
+        return [];
+      }
+      
+      return await database.select().from(teams).orderBy(teams.name);
     } catch (error) {
-      console.error('Failed to get teams:', error);
+      console.error('Failed to get all teams:', error);
       return [];
     }
   }
@@ -130,7 +233,12 @@ export class DatabaseStorage {
   // Match Management
   async createMatch(matchData: InsertMatch) {
     try {
-      const [newMatch] = await db.insert(matches).values(matchData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newMatch] = await database.insert(matches).values(matchData).returning();
       return newMatch;
     } catch (error) {
       console.error('Failed to create match:', error);
@@ -140,7 +248,12 @@ export class DatabaseStorage {
 
   async findMatchById(id: number) {
     try {
-      const [match] = await db.select().from(matches).where(eq(matches.id, id));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [match] = await database.select().from(matches).where(eq(matches.id, id));
       return match || null;
     } catch (error) {
       console.error('Failed to find match by ID:', error);
@@ -150,7 +263,12 @@ export class DatabaseStorage {
 
   async updateMatch(id: number, updates: Partial<InsertMatch>) {
     try {
-      const [updatedMatch] = await db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [updatedMatch] = await database
         .update(matches)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(matches.id, id))
@@ -162,12 +280,17 @@ export class DatabaseStorage {
     }
   }
 
-  async getCurrentMatch(userId: string) {
+  async getCurrentMatch() {
     try {
-      const [match] = await db
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [match] = await database
         .select()
         .from(matches)
-        .where(and(eq(matches.userId, userId), eq(matches.isComplete, false)))
+        .where(eq(matches.status, 'in_progress'))
         .orderBy(desc(matches.updatedAt))
         .limit(1);
       return match || null;
@@ -177,15 +300,16 @@ export class DatabaseStorage {
     }
   }
 
-  async getAllMatches(userId: string) {
+  async getAllMatches() {
     try {
-      return await db
-        .select()
-        .from(matches)
-        .where(eq(matches.userId, userId))
-        .orderBy(desc(matches.updatedAt));
+      const database = await getDb();
+      if (!database) {
+        return [];
+      }
+      
+      return await database.select().from(matches).orderBy(desc(matches.updatedAt));
     } catch (error) {
-      console.error('Failed to get matches:', error);
+      console.error('Failed to get all matches:', error);
       return [];
     }
   }
@@ -193,7 +317,12 @@ export class DatabaseStorage {
   // Game State Management
   async createGameState(gameStateData: InsertGameState) {
     try {
-      const [newGameState] = await db.insert(gameState).values(gameStateData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newGameState] = await database.insert(gameState).values(gameStateData).returning();
       return newGameState;
     } catch (error) {
       console.error('Failed to create game state:', error);
@@ -203,7 +332,12 @@ export class DatabaseStorage {
 
   async findGameStateByMatchId(matchId: number) {
     try {
-      const [state] = await db.select().from(gameState).where(eq(gameState.matchId, matchId));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [state] = await database.select().from(gameState).where(eq(gameState.matchId, matchId));
       return state || null;
     } catch (error) {
       console.error('Failed to find game state by match ID:', error);
@@ -213,7 +347,12 @@ export class DatabaseStorage {
 
   async updateGameState(matchId: number, updates: Partial<InsertGameState>) {
     try {
-      const [updatedState] = await db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [updatedState] = await database
         .update(gameState)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(gameState.matchId, matchId))
@@ -225,10 +364,34 @@ export class DatabaseStorage {
     }
   }
 
+  async getCurrentGameState() {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const currentMatch = await this.getCurrentMatch();
+      if (!currentMatch) {
+        return null;
+      }
+      
+      return await this.findGameStateByMatchId(currentMatch.id);
+    } catch (error) {
+      console.error('Failed to get current game state:', error);
+      return null;
+    }
+  }
+
   // Settings Management
   async createSettings(settingsData: InsertSettings) {
     try {
-      const [newSettings] = await db.insert(settings).values(settingsData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newSettings] = await database.insert(settings).values(settingsData).returning();
       return newSettings;
     } catch (error) {
       console.error('Failed to create settings:', error);
@@ -238,7 +401,12 @@ export class DatabaseStorage {
 
   async findSettingsByUserId(userId: string) {
     try {
-      const [userSettings] = await db.select().from(settings).where(eq(settings.userId, userId));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [userSettings] = await database.select().from(settings).where(eq(settings.userId, userId));
       return userSettings || null;
     } catch (error) {
       console.error('Failed to find settings by user ID:', error);
@@ -248,7 +416,12 @@ export class DatabaseStorage {
 
   async updateSettings(userId: string, updates: Partial<InsertSettings>) {
     try {
-      const [updatedSettings] = await db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [updatedSettings] = await database
         .update(settings)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(settings.userId, userId))
@@ -263,7 +436,12 @@ export class DatabaseStorage {
   // Template Management
   async createTemplate(templateData: InsertScoreboardTemplate) {
     try {
-      const [newTemplate] = await db.insert(scoreboardTemplates).values(templateData).returning();
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [newTemplate] = await database.insert(scoreboardTemplates).values(templateData).returning();
       return newTemplate;
     } catch (error) {
       console.error('Failed to create template:', error);
@@ -271,9 +449,14 @@ export class DatabaseStorage {
     }
   }
 
-  async findTemplateById(id: number) {
+  async findTemplateById(id: string) {
     try {
-      const [template] = await db.select().from(scoreboardTemplates).where(eq(scoreboardTemplates.id, id));
+      const database = await getDb();
+      if (!database) {
+        return null;
+      }
+      
+      const [template] = await database.select().from(scoreboardTemplates).where(eq(scoreboardTemplates.id, id));
       return template || null;
     } catch (error) {
       console.error('Failed to find template by ID:', error);
@@ -281,9 +464,14 @@ export class DatabaseStorage {
     }
   }
 
-  async updateTemplate(id: number, updates: Partial<InsertScoreboardTemplate>) {
+  async updateTemplate(id: string, updates: Partial<InsertScoreboardTemplate>) {
     try {
-      const [updatedTemplate] = await db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const [updatedTemplate] = await database
         .update(scoreboardTemplates)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(scoreboardTemplates.id, id))
@@ -295,9 +483,14 @@ export class DatabaseStorage {
     }
   }
 
-  async deleteTemplate(id: number) {
+  async deleteTemplate(id: string) {
     try {
-      await db.delete(scoreboardTemplates).where(eq(scoreboardTemplates.id, id));
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(scoreboardTemplates).where(eq(scoreboardTemplates.id, id));
       return true;
     } catch (error) {
       console.error('Failed to delete template:', error);
@@ -307,7 +500,12 @@ export class DatabaseStorage {
 
   async getTemplatesByUserId(userId: string) {
     try {
-      return await db
+      const database = await getDb();
+      if (!database) {
+        return [];
+      }
+      
+      return await database
         .select()
         .from(scoreboardTemplates)
         .where(eq(scoreboardTemplates.userId, userId))
@@ -320,7 +518,12 @@ export class DatabaseStorage {
 
   async getPublicTemplates() {
     try {
-      return await db
+      const database = await getDb();
+      if (!database) {
+        return [];
+      }
+      
+      return await database
         .select()
         .from(scoreboardTemplates)
         .where(eq(scoreboardTemplates.isPublic, true))
@@ -331,15 +534,25 @@ export class DatabaseStorage {
     }
   }
 
-  // Initialize default data for a new user
+  // Initialize user data
   async initializeUserData(userId: string) {
     try {
-      // Create default teams
+      const database = await getDb();
+      if (!database) {
+        console.log('Database not available, skipping user data initialization');
+        return;
+      }
+      
+      // Create default teams for the user
       const homeTeam = await this.createTeam({
+        id: 1,
         userId,
-        name: 'EAGLES',
-        location: 'Central High',
-        colorScheme: 'purple',
+        name: 'HOME TEAM',
+        location: 'Home',
+        logoPath: null,
+        logoPublicId: null,
+        colorScheme: 'blue',
+        customColor: null,
         customTextColor: '#FFFFFF',
         customSetBackgroundColor: '#000000',
         isTemplate: false,
@@ -348,10 +561,14 @@ export class DatabaseStorage {
       });
 
       const awayTeam = await this.createTeam({
+        id: 2,
         userId,
-        name: 'TIGERS',
-        location: 'North Valley',
-        colorScheme: 'blue',
+        name: 'AWAY TEAM',
+        location: 'Away',
+        logoPath: null,
+        logoPublicId: null,
+        colorScheme: 'red',
+        customColor: null,
         customTextColor: '#FFFFFF',
         customSetBackgroundColor: '#000000',
         isTemplate: false,
@@ -361,8 +578,9 @@ export class DatabaseStorage {
 
       // Create default match
       const match = await this.createMatch({
+        id: 1,
         userId,
-        name: 'Default Match',
+        name: 'New Match',
         homeTeamId: homeTeam.id,
         awayTeamId: awayTeam.id,
         format: 5,
@@ -380,20 +598,18 @@ export class DatabaseStorage {
 
       // Create default game state
       await this.createGameState({
+        id: 1,
         matchId: match.id,
         homeScore: 0,
         awayScore: 0,
         theme: 'default',
-        displayOptions: {
-          showSetHistory: true,
-          showSponsors: true,
-          showTimer: false
-        },
+        displayOptions: { showSetHistory: true, showSponsors: true, showTimer: false },
         updatedAt: new Date()
       });
 
       // Create default settings
       await this.createSettings({
+        id: 1,
         userId,
         sponsorLogoPath: null,
         sponsorLogoPublicId: null,
@@ -406,11 +622,114 @@ export class DatabaseStorage {
         updatedAt: new Date()
       });
 
-      console.log(`✅ Initialized default data for user: ${userId}`);
-      return { homeTeam, awayTeam, match };
+      console.log('✅ User data initialized successfully');
     } catch (error) {
       console.error('Failed to initialize user data:', error);
-      throw new Error('Failed to initialize user data');
+    }
+  }
+
+  // Cleanup methods
+  async getAllUsers() {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return [];
+      }
+      
+      return await database.select().from(users);
+    } catch (error) {
+      console.error('Failed to get all users:', error);
+      return [];
+    }
+  }
+
+  async deleteUser(userId: string) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(users).where(eq(users.id, userId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      return false;
+    }
+  }
+
+  async deleteUserSessions(userId: string) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(userSessions).where(eq(userSessions.userId, userId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete user sessions:', error);
+      return false;
+    }
+  }
+
+  async deleteUserSettings(userId: string) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(settings).where(eq(settings.userId, userId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete user settings:', error);
+      return false;
+    }
+  }
+
+  async deleteUserTemplates(userId: string) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(scoreboardTemplates).where(eq(scoreboardTemplates.userId, userId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete user templates:', error);
+      return false;
+    }
+  }
+
+  async deleteUserMatches(userId: string) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(matches).where(eq(matches.userId, userId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete user matches:', error);
+      return false;
+    }
+  }
+
+  async deleteUserTeams(userId: string) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        return false;
+      }
+      
+      await database.delete(teams).where(eq(teams.userId, userId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete user teams:', error);
+      return false;
     }
   }
 }

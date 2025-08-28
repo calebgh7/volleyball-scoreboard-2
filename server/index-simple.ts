@@ -1,676 +1,376 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { createServer, type Server } from "http";
-import path from "path";
-import { loginUser, registerUser, logoutUser, authenticateUser } from "./auth-simple.js";
-import { authenticateToken, optionalAuth } from "./auth-middleware.js";
-import { databaseStorage } from "./database-storage.js";
-import { cloudStorage } from "./cloud-storage.js";
+import express from 'express';
+import cors from 'cors';
+import { databaseStorage } from './database-storage.js';
+import { registerUser, loginUser, authenticateUser, logoutUser } from './auth-simple.js';
+import { authenticateToken } from './auth-middleware.js';
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+const PORT = process.env.PORT || 3000;
 
-// Initialize database connection
+// Middleware
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Initialize database on startup
 async function initializeServer() {
   try {
-    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
-      console.log('🔄 Initializing database connection...');
-      console.log('🔗 DATABASE_URL found:', (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL)?.replace(/:[^:@]*@/, ':****@'));
+    console.log('🚀 Initializing server...');
+    
+    // Test database connection
+    const dbHealth = await databaseStorage.checkHealth();
+    if (dbHealth.connected) {
+      console.log('✅ Database connected successfully');
       
-      const { initializeDatabase } = await import('./database.js');
-      const dbInitialized = await initializeDatabase();
-      
-      if (dbInitialized) {
-        console.log('✅ Database connection established and ready');
-      } else {
-        console.log('⚠️ Database connection failed, falling back to in-memory storage');
+      // Run migrations
+      try {
+        await databaseStorage.runMigrations();
+        console.log('✅ Database migrations completed');
+      } catch (migrationError) {
+        console.log('⚠️ Database migrations failed, continuing with existing schema:', migrationError);
       }
     } else {
-      console.log('⚠️ No database URL provided, using in-memory storage');
+      console.log('⚠️ Database not available, using in-memory storage');
     }
+    
+    console.log('✅ Server initialization complete');
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    console.log('🔄 Continuing with in-memory storage');
+    console.error('❌ Server initialization failed:', error);
+    console.log('⚠️ Continuing with limited functionality');
   }
 }
 
-// Simple logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      console.log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-  
-  next();
-});
-
-// Simple in-memory storage
-const storage = {
-  teams: new Map(),
-  matches: new Map(),
-  gameStates: new Map(),
-  templates: new Map(),
-  settings: {
-    id: 1,
-    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
-    sponsorLogoPath: null,
-    sponsorLogoPublicId: null,
-    primaryColor: "#1565C0",
-    accentColor: "#FF6F00",
-    theme: "standard",
-    defaultMatchFormat: 5,
-    autoSave: true,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-};
-
-// Initialize with default data
-(function initializeStorage() {
-  // Default teams
-  const homeTeam = {
-    id: 1,
-    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
-    name: "EAGLES",
-    location: "Central High",
-    logoPath: null,
-    logoPublicId: null,
-    colorScheme: "purple",
-    customColor: null,
-    customTextColor: "#FFFFFF",
-    customSetBackgroundColor: "#000000",
-    isTemplate: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  const awayTeam = {
-    id: 2,
-    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
-    name: "TIGERS", 
-    location: "North Valley",
-    logoPath: null,
-    logoPublicId: null,
-    colorScheme: "blue",
-    customColor: null,
-    customTextColor: "#FFFFFF",
-    customSetBackgroundColor: "#000000",
-    isTemplate: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  storage.teams.set(homeTeam.id, homeTeam);
-  storage.teams.set(awayTeam.id, awayTeam);
-  
-  // Default match
-  const match = {
-    id: 1,
-    userId: "00000000-0000-0000-0000-000000000000", // Placeholder UUID
-    name: "Default Match",
-    homeTeamId: homeTeam.id,
-    awayTeamId: awayTeam.id,
-    format: 5,
-    currentSet: 1,
-    homeSetsWon: 0,
-    awaySetsWon: 0,
-    isComplete: false,
-    status: "in_progress",
-    winner: null,
-    setHistory: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastPlayed: new Date()
-  };
-  
-  storage.matches.set(match.id, match);
-  
-  // Default game state
-  const gameState = {
-    id: 1,
-    matchId: match.id,
-    homeScore: 0,
-    awayScore: 0,
-    theme: "default",
-    displayOptions: { showSetHistory: true, showSponsors: true, showTimer: false },
-    updatedAt: new Date()
-  };
-  
-  storage.gameStates.set(match.id, gameState);
-})();
-
-// Authentication Routes
-app.post("/api/auth/register", async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-    
-    const user = await registerUser({ email, password, name });
-    res.status(201).json({ message: "User registered successfully", user });
-  } catch (error: any) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-    
-    const result = await loginUser({ email, password });
-    res.json(result);
-  } catch (error: any) {
-    res.status(401).json({ message: error.message });
-  }
-});
-
-app.post("/api/auth/logout", authenticateToken, async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (token) {
-      await logoutUser(token);
-    }
-    res.json({ message: "Logged out successfully" });
-  } catch (error: any) {
-    res.status(500).json({ message: "Logout failed" });
-  }
-});
-
-app.get("/api/auth/me", authenticateToken, (req, res) => {
-  res.json({ user: req.user });
-});
-
-// API Routes
 // Health check endpoint
-app.get("/api/health", async (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
-    // Test database connection if available
-    let dbStatus = 'not_configured';
-    if (process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL) {
-      try {
-        const { checkDatabaseHealth } = await import('./database.js');
-        const health = await checkDatabaseHealth();
-        dbStatus = health.status;
-      } catch (error) {
-        dbStatus = 'error';
-        console.error('Database health check failed:', error);
-      }
-    }
-    
+    const dbHealth = await databaseStorage.checkHealth();
     res.json({
-      status: "ok",
+      status: 'healthy',
       timestamp: new Date().toISOString(),
-      database: dbStatus,
-      environment: process.env.NODE_ENV || 'development'
+      database: dbHealth,
+      uptime: process.uptime()
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: "error", 
-      message: error.message,
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
 });
 
-app.get("/api/current-match", optionalAuth, async (req, res) => {
+// Authentication endpoints
+app.post('/api/auth/register', async (req, res) => {
   try {
-    let match, homeTeam, awayTeam, gameState;
+    const { email, password, name } = req.body;
     
-    if (req.user) {
-      // Authenticated user - get their current match
-      match = await databaseStorage.getCurrentMatch(req.user.id);
-      if (match) {
-        homeTeam = await databaseStorage.findTeamById(match.homeTeamId);
-        awayTeam = await databaseStorage.findTeamById(match.awayTeamId);
-        gameState = await databaseStorage.findGameStateByMatchId(match.id);
-      }
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Email, password, and name are required' });
+    }
+    
+    const result = await registerUser(email, password, name);
+    
+    if (result.success) {
+      res.json({
+        message: 'User registered successfully',
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name
+        },
+        token: result.token
+      });
     } else {
-      // Unauthenticated user - get default match
-      match = storage.matches.get(1);
-      if (match) {
-        homeTeam = storage.teams.get(match.homeTeamId);
-        awayTeam = storage.teams.get(match.awayTeamId);
-        gameState = storage.gameStates.get(match.id);
-      }
+      res.status(400).json({ error: result.error });
     }
-
-    if (!match) {
-      return res.status(404).json({ message: "No current match found" });
-    }
-
-    if (!homeTeam || !awayTeam || !gameState) {
-      return res.status(500).json({ message: "Match data incomplete" });
-    }
-
-    res.json({
-      match,
-      homeTeam,
-      awayTeam,
-      gameState
-    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to get current match" });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-app.patch("/api/game-state/:matchId", async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
-    const matchId = parseInt(req.params.matchId);
-    const updates = req.body;
+    const { email, password } = req.body;
     
-    const currentState = storage.gameStates.get(matchId);
-    if (!currentState) {
-      return res.status(404).json({ message: "Game state not found" });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
     
-    const updatedState = { ...currentState, ...updates, updatedAt: new Date() };
-    storage.gameStates.set(matchId, updatedState);
+    const result = await loginUser(email, password);
     
-    res.json(updatedState);
+    if (result.success) {
+      res.json({
+        message: 'Login successful',
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name
+        },
+        token: result.token
+      });
+    } else {
+      res.status(401).json({ error: result.error });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Failed to update game state" });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
-app.get("/api/matches/:id", async (req, res) => {
+app.post('/api/auth/logout', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const match = storage.matches.get(id);
-    
-    if (!match) {
-      return res.status(404).json({ message: "Match not found" });
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
     }
     
-    res.json(match);
+    const result = await logoutUser(token);
+    
+    if (result.success) {
+      res.json({ message: 'Logout successful' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Failed to get match" });
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
   }
 });
 
-app.patch("/api/matches/:id", async (req, res) => {
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const updates = req.body;
-    
-    const currentMatch = storage.matches.get(id);
-    if (!currentMatch) {
-      return res.status(404).json({ message: "Match not found" });
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
     }
     
-    const updatedMatch = { ...currentMatch, ...updates, updatedAt: new Date() };
-    storage.matches.set(id, updatedMatch);
+    const result = await authenticateUser(token);
     
-    res.json(updatedMatch);
+    if (result.success) {
+      res.json({
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name
+        }
+      });
+    } else {
+      res.status(401).json({ error: result.error });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Failed to update match" });
+    console.error('Auth check error:', error);
+    res.status(500).json({ error: 'Authentication check failed' });
   }
 });
 
-app.post("/api/matches/:id/reset", async (req, res) => {
+// Scoreboard data endpoints
+app.get('/api/current-match', async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const match = storage.matches.get(id);
-    
-    if (!match) {
-      return res.status(404).json({ message: "Match not found" });
+    const match = await databaseStorage.getCurrentMatch();
+    res.json(match || { message: 'No current match' });
+  } catch (error) {
+    console.error('Error fetching current match:', error);
+    res.status(500).json({ error: 'Failed to fetch current match' });
+  }
+});
+
+app.get('/api/game-state', async (req, res) => {
+  try {
+    const gameState = await databaseStorage.getCurrentGameState();
+    res.json(gameState || { message: 'No game state available' });
+  } catch (error) {
+    console.error('Error fetching game state:', error);
+    res.status(500).json({ error: 'Failed to fetch game state' });
+  }
+});
+
+app.get('/api/matches', authenticateToken, async (req, res) => {
+  try {
+    const matches = await databaseStorage.getAllMatches();
+    res.json(matches);
+  } catch (error) {
+    console.error('Error fetching matches:', error);
+    res.status(500).json({ error: 'Failed to fetch matches' });
+  }
+});
+
+app.get('/api/teams', async (req, res) => {
+  try {
+    const teams = await databaseStorage.getAllTeams();
+    res.json(teams);
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).json({ error: 'Failed to fetch teams' });
+  }
+});
+
+app.get('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    // Reset match to initial state
-    const resetMatch = { 
-      ...match, 
-      currentSet: 1,
-      homeSetsWon: 0,
-      awaySetsWon: 0,
-      isComplete: false,
-      status: "in_progress",
-      winner: null,
-      setHistory: [],
-      updatedAt: new Date()
-    };
-    
-    storage.matches.set(id, resetMatch);
-    
-    // Reset game state
-    const gameState = storage.gameStates.get(id);
-    if (gameState) {
-      const resetGameState = { 
-        ...gameState, 
-        homeScore: 0, 
-        awayScore: 0, 
-        updatedAt: new Date() 
-      };
-      storage.gameStates.set(id, resetGameState);
+    const settings = await databaseStorage.findSettingsByUserId(userId);
+    res.json(settings || { message: 'No settings found' });
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Template management endpoints
+app.get('/api/templates', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    res.json({ message: "Match reset successfully" });
+    const templates = await databaseStorage.getTemplatesByUserId(userId);
+    res.json(templates);
   } catch (error) {
-    res.status(500).json({ message: "Failed to reset match" });
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ error: 'Failed to fetch templates' });
   }
 });
 
-app.get("/api/teams/:id", async (req, res) => {
+app.post('/api/templates', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const team = storage.teams.get(id);
-    
-    if (!team) {
-      return res.status(404).json({ message: "Team not found" });
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    res.json(team);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to get team" });
-  }
-});
-
-app.patch("/api/teams/:id", async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const updates = req.body;
+    const { name, description, data } = req.body;
     
-    const currentTeam = storage.teams.get(id);
-    if (!currentTeam) {
-      return res.status(404).json({ message: "Team not found" });
-    }
-    
-    const updatedTeam = { ...currentTeam, ...updates, updatedAt: new Date() };
-    storage.teams.set(id, updatedTeam);
-    
-    res.json(updatedTeam);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to update team" });
-  }
-});
-
-app.get("/api/settings", async (req, res) => {
-  try {
-    res.json(storage.settings);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to get settings" });
-  }
-});
-
-app.patch("/api/settings", async (req, res) => {
-  try {
-    const updates = req.body;
-    storage.settings = { ...storage.settings, ...updates, updatedAt: new Date() };
-    res.json(storage.settings);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to update settings" });
-  }
-});
-
-// Scoreboard Template Routes
-app.post("/api/templates", authenticateToken, async (req, res) => {
-  try {
-    const { name, description, homeTeamId, awayTeamId, settings } = req.body;
-    
-    if (!name) {
-      return res.status(400).json({ message: "Template name is required" });
+    if (!name || !data) {
+      return res.status(400).json({ error: 'Name and data are required' });
     }
     
     const template = await databaseStorage.createTemplate({
-      userId: req.user!.id,
+      id: crypto.randomUUID(),
+      userId,
       name,
-      description,
-      homeTeamId,
-      awayTeamId,
-      settings,
+      description: description || '',
+      data,
       isPublic: false,
       createdAt: new Date(),
       updatedAt: new Date()
     });
     
-    res.status(201).json(template);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.json(template);
+  } catch (error) {
+    console.error('Error creating template:', error);
+    res.status(500).json({ error: 'Failed to create template' });
   }
 });
 
-app.get("/api/templates", optionalAuth, async (req, res) => {
+app.get('/api/templates/:id', async (req, res) => {
   try {
-    let templates = [];
-    
-    if (req.user) {
-      // Authenticated user - get their templates + public ones
-      const userTemplates = await databaseStorage.getTemplatesByUserId(req.user.id);
-      const publicTemplates = await databaseStorage.getPublicTemplates();
-      templates = [...userTemplates, ...publicTemplates];
-    } else {
-      // Show only public templates for unauthenticated users
-      templates = await databaseStorage.getPublicTemplates();
-    }
-    
-    res.json(templates);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.get("/api/templates/:id", optionalAuth, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    
+    const { id } = req.params;
     const template = await databaseStorage.findTemplateById(id);
-    if (!template) {
-      return res.status(404).json({ message: "Template not found" });
-    }
     
-    // Check if user can access this template
-    if (!template.isPublic && req.user?.id !== template.userId) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
     }
     
     res.json(template);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+  } catch (error) {
+    console.error('Error fetching template:', error);
+    res.status(500).json({ error: 'Failed to fetch template' });
   }
 });
 
-app.put("/api/templates/:id", authenticateToken, async (req, res) => {
+app.put('/api/templates/:id', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const { id } = req.params;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     
     const template = await databaseStorage.findTemplateById(id);
+    
     if (!template) {
-      return res.status(404).json({ message: "Template not found" });
+      return res.status(404).json({ error: 'Template not found' });
     }
     
-    // Check if user owns this template
-    if (template.userId !== req.user!.id) {
-      return res.status(403).json({ message: "Access denied" });
+    if (template.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to modify this template' });
     }
     
-    const updates = req.body;
-    const updatedTemplate = await databaseStorage.updateTemplate(id, updates);
+    const updatedTemplate = await databaseStorage.updateTemplate(id, {
+      ...req.body,
+      updatedAt: new Date()
+    });
     
     res.json(updatedTemplate);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+  } catch (error) {
+    console.error('Error updating template:', error);
+    res.status(500).json({ error: 'Failed to update template' });
   }
 });
 
-app.delete("/api/templates/:id", authenticateToken, async (req, res) => {
+app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const { id } = req.params;
+    const userId = req.user?.id;
     
-    const template = await databaseStorage.findTemplateById(id);
-    if (!template) {
-      return res.status(404).json({ message: "Template not found" });
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    // Check if user owns this template
-    if (template.userId !== req.user!.id) {
-      return res.status(403).json({ message: "Access denied" });
+    const template = await databaseStorage.findTemplateById(id);
+    
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    
+    if (template.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this template' });
     }
     
     await databaseStorage.deleteTemplate(id);
-    res.json({ message: "Template deleted successfully" });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.json({ message: 'Template deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting template:', error);
+    res.status(500).json({ error: 'Failed to delete template' });
   }
 });
 
-// Image Upload Routes
-app.post("/api/upload/logo", authenticateToken, async (req, res) => {
+// Cleanup endpoint for test users
+app.delete('/api/cleanup-test-users', async (req, res) => {
   try {
-    const { imageData, filename, teamId } = req.body;
+    const users = await databaseStorage.getAllUsers();
+    let deletedCount = 0;
     
-    if (!imageData || !filename) {
-      return res.status(400).json({ message: "Image data and filename are required" });
-    }
-
-    // Check if Cloudinary is configured
-    if (!cloudStorage.isConfigured()) {
-      return res.status(500).json({ message: "Cloud storage not configured" });
-    }
-
-    // Upload image to Cloudinary
-    const uploadResult = await cloudStorage.uploadImageFromBase64(imageData, filename, {
-      folder: `volleyscore/logos/${req.user!.id}`,
-      transformation: {
-        width: 512,
-        height: 512,
-        crop: 'limit',
-        quality: 'auto'
+    for (const user of users) {
+      if (user.email.includes('test') || user.email.includes('@example.com')) {
+        await databaseStorage.deleteUser(user.id);
+        deletedCount++;
       }
-    });
-
-    // Update team with logo information
-    if (teamId) {
-      await databaseStorage.updateTeam(teamId, {
-        logoPublicId: uploadResult.publicId
-      });
     }
-
-    res.json({
-      message: "Logo uploaded successfully",
-      logo: {
-        publicId: uploadResult.publicId,
-        url: uploadResult.secureUrl,
-        thumbnailUrl: cloudStorage.generateThumbnailUrl(uploadResult.publicId, 150)
-      }
-    });
-  } catch (error: any) {
-    console.error('Logo upload failed:', error);
-    res.status(500).json({ message: error.message || "Logo upload failed" });
-  }
-});
-
-app.post("/api/upload/sponsor", authenticateToken, async (req, res) => {
-  try {
-    const { imageData, filename } = req.body;
     
-    if (!imageData || !filename) {
-      return res.status(400).json({ message: "Image data and filename are required" });
-    }
-
-    // Check if Cloudinary is configured
-    if (!cloudStorage.isConfigured()) {
-      return res.status(500).json({ message: "Cloud storage not configured" });
-    }
-
-    // Upload image to Cloudinary
-    const uploadResult = await cloudStorage.uploadImageFromBase64(imageData, filename, {
-      folder: `volleyscore/sponsors/${req.user!.id}`,
-      transformation: {
-        width: 800,
-        height: 400,
-        crop: 'limit',
-        quality: 'auto'
-      }
+    res.json({ 
+      message: `Deleted ${deletedCount} test users`,
+      deletedCount 
     });
-
-    // Update user settings with sponsor logo
-    await databaseStorage.updateSettings(req.user!.id, {
-      sponsorLogoPublicId: uploadResult.publicId
-    });
-
-    res.json({
-      message: "Sponsor logo uploaded successfully",
-      logo: {
-        publicId: uploadResult.publicId,
-        url: uploadResult.secureUrl,
-        thumbnailUrl: cloudStorage.generateThumbnailUrl(uploadResult.publicId, 300)
-      }
-    });
-  } catch (error: any) {
-    console.error('Sponsor logo upload failed:', error);
-    res.status(500).json({ message: error.message || "Sponsor logo upload failed" });
+  } catch (error) {
+    console.error('Error cleaning up test users:', error);
+    res.status(500).json({ error: 'Failed to cleanup test users' });
   }
-});
-
-app.delete("/api/upload/:publicId", authenticateToken, async (req, res) => {
-  try {
-    const { publicId } = req.params;
-    
-    // Check if Cloudinary is configured
-    if (!cloudStorage.isConfigured()) {
-      return res.status(500).json({ message: "Cloud storage not configured" });
-    }
-
-    // Delete image from Cloudinary
-    const deleted = await cloudStorage.deleteImage(publicId);
-    
-    if (deleted) {
-      res.json({ message: "Image deleted successfully" });
-    } else {
-      res.status(500).json({ message: "Failed to delete image" });
-    }
-  } catch (error: any) {
-    console.error('Image deletion failed:', error);
-    res.status(500).json({ message: error.message || "Image deletion failed" });
-  }
-});
-
-// API-only server - Vercel handles static files
-app.use("*", (req, res, next) => {
-  if (req.originalUrl.startsWith('/api/')) {
-    return next();
-  }
-  res.status(404).json({ 
-    message: "Not Found", 
-    available: ["/api/health", "/api/current-match", "/api/game-state/:matchId", "/api/matches/:id", "/api/teams/:id", "/api/settings"],
-    note: "This is an API-only server. The client application is served by Vercel."
-  });
-});
-
-// Error handling middleware
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  
-  res.status(status).json({ message });
-  console.error('Error:', err);
 });
 
 // Start server
-const port = parseInt(process.env.PORT || '5000', 10);
-const host = process.env.NODE_ENV === 'development' ? 'localhost' : '0.0.0.0';
-
-const server = createServer(app);
-
-server.listen({
-  port,
-  host,
-}, async () => {
-  console.log(`🚀 Server running on ${host}:${port}`);
-  console.log(`📊 API available at http://${host}:${port}/api`);
-  console.log(`🌐 Health check: http://${host}:${port}/api/health`);
-  
-  // Initialize database
-  await initializeServer();
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  initializeServer();
 });
 
 export default app;

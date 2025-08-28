@@ -1,73 +1,68 @@
 import { Request, Response, NextFunction } from 'express';
-import { authenticateUser } from './auth-simple.js';
+import jwt from 'jsonwebtoken';
 
-// Extend Request interface to include user
+// Simple, hardcoded JWT secret for reliability
+const JWT_SECRET = 'volleyball-scoreboard-secret-key-2024';
+
+// Extend Express Request interface to include user
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: string;
         email: string;
-        name?: string;
       };
     }
   }
 }
 
-// Authentication middleware
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+export function authenticateToken(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    console.log('🔍 Full auth header:', authHeader);
-    
-    if (!authHeader) {
-      console.log('❌ No authorization header provided');
-      return res.status(401).json({ message: 'Access token required' });
-    }
+    const token = authHeader && authHeader.split(' ')[1];
 
-    const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
-    
     if (!token) {
-      console.log('❌ No token found in authorization header');
-      return res.status(401).json({ message: 'Access token required' });
+      return res.status(401).json({ error: 'Access token required' });
     }
 
-    console.log('🔍 Token length:', token.length);
-    console.log('🔍 Token starts with:', token.substring(0, 20));
-    console.log('🔍 Token ends with:', token.substring(token.length - 20));
-    
-    const user = await authenticateUser(token);
-    
-    if (!user) {
-      console.log('❌ Token authentication failed');
-      return res.status(401).json({ message: 'Invalid or expired token' });
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+      req.user = {
+        id: decoded.userId,
+        email: decoded.email
+      };
+      next();
+    } catch (jwtError) {
+      console.error('JWT verification failed:', jwtError);
+      return res.status(403).json({ error: 'Invalid or expired token' });
     }
-
-    console.log('✅ Token authenticated successfully for user:', user.email);
-    req.user = user;
-    next();
   } catch (error) {
-    console.error('❌ Authentication middleware error:', error);
-    return res.status(401).json({ message: 'Authentication failed' });
+    console.error('Authentication middleware error:', error);
+    return res.status(500).json({ error: 'Authentication failed' });
   }
-};
+}
 
-// Optional authentication middleware (user is optional)
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token) {
-      const user = await authenticateUser(token);
-      if (user) {
-        req.user = user;
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+        req.user = {
+          id: decoded.userId,
+          email: decoded.email
+        };
+      } catch (jwtError) {
+        // Token is invalid, but we continue without authentication
+        console.log('Optional auth: Invalid token, continuing as unauthenticated');
       }
     }
-
+    
     next();
   } catch (error) {
-    // Continue without authentication
-    next();
+    console.error('Optional auth middleware error:', error);
+    next(); // Continue even if there's an error
   }
-};
+}
