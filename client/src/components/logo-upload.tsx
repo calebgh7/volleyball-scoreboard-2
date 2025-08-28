@@ -143,16 +143,20 @@ export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }:
       // Create preview
       createPreview(file);
       
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('logo', file);
-      formData.append('teamId', teamId.toString());
-      formData.append('dimensions', `${imageValidation.width}x${imageValidation.height}`);
+      // Convert file to base64 for Cloudinary API
+      const base64 = await fileToBase64(file);
 
-      // Upload logo
-      const response = await fetch(`/api/teams/${teamId}/logo`, {
+      // Upload logo to Cloudinary
+      const response = await fetch('/api/upload/logo', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageData: base64,
+          filename: file.name,
+          teamId: teamId
+        }),
       });
 
       if (!response.ok) {
@@ -162,13 +166,13 @@ export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }:
 
       const result = await response.json();
       
-      // Update UI and notify parent
+      // Update UI and notify parent with the Cloudinary URL
       queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
-      onLogoChange?.(result.logoPath);
+      onLogoChange?.(result.logo.url);
       
       toast({
         title: "Success",
-        description: "Logo uploaded successfully",
+        description: "Logo uploaded successfully to Cloudinary",
         variant: "default"
       });
       
@@ -185,14 +189,8 @@ export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }:
 
   const handleRemoveLogo = async () => {
     try {
-      const response = await fetch(`/api/teams/${teamId}/logo`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove logo');
-      }
-
+      // For now, we'll just clear the logo without deleting from Cloudinary
+      // You can implement deletion later if needed
       queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
       onLogoChange?.('');
       setPreview(null);
@@ -356,3 +354,13 @@ export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }:
     </div>
   );
 }
+
+// Helper function to convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};

@@ -126,7 +126,6 @@ export function SettingsModal({ user, token, isOpen, onClose }: SettingsModalPro
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ imageData, filename })
       });
@@ -139,7 +138,8 @@ export function SettingsModal({ user, token, isOpen, onClose }: SettingsModalPro
       const result = await response.json();
       setSettings(prev => ({
         ...prev,
-        sponsorLogoPublicId: result.logo.publicId
+        sponsorLogoPublicId: result.logo.publicId,
+        sponsorLogoPath: result.logo.url
       }));
 
       // Reload settings to get updated data
@@ -153,9 +153,6 @@ export function SettingsModal({ user, token, isOpen, onClose }: SettingsModalPro
     try {
       const response = await fetch(`/api/upload/${publicId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
 
       if (!response.ok) {
@@ -165,7 +162,8 @@ export function SettingsModal({ user, token, isOpen, onClose }: SettingsModalPro
 
       setSettings(prev => ({
         ...prev,
-        sponsorLogoPublicId: undefined
+        sponsorLogoPublicId: undefined,
+        sponsorLogoPath: undefined
       }));
 
       // Reload settings to get updated data
@@ -177,8 +175,8 @@ export function SettingsModal({ user, token, isOpen, onClose }: SettingsModalPro
 
   const currentSponsorImage = settings.sponsorLogoPublicId ? {
     publicId: settings.sponsorLogoPublicId,
-    url: `https://res.cloudinary.com/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'demo'}/image/upload/${settings.sponsorLogoPublicId}`,
-    thumbnailUrl: `https://res.cloudinary.com/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'demo'}/image/upload/c_fill,w_300,h_300/${settings.sponsorLogoPublicId}`
+    url: settings.sponsorLogoPath || `https://res.cloudinary.com/dephwfkzc/image/upload/${settings.sponsorLogoPublicId}`,
+    thumbnailUrl: `https://res.cloudinary.com/dephwfkzc/image/upload/c_fill,w_300,h_150/${settings.sponsorLogoPublicId}`
   } : undefined;
 
   return (

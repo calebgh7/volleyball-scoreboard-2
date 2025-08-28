@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Scoreboard from "@/pages/scoreboard";
+import CloudinaryTest from "@/components/cloudinary-test";
 import { Login } from "@/components/login";
 import { useEffect, useState } from "react";
 import type { Settings } from "@shared/schema";
@@ -75,6 +76,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={() => <Scoreboard user={user} token={token!} onLogout={handleLogout} />} />
+      <Route path="/cloudinary-test" component={CloudinaryTest} />
       <Route component={NotFound} />
     </Switch>
   );

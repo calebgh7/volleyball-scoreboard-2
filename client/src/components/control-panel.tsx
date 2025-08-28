@@ -56,6 +56,16 @@ export default function ControlPanel({ data }: ControlPanelProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Helper function to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   if (!data) {
     return (
       <div className="space-y-6">
@@ -779,23 +789,35 @@ export default function ControlPanel({ data }: ControlPanelProps) {
                   const file = e.target.files?.[0];
                   if (file) {
                     try {
-                      const formData = new FormData();
-                      formData.append('logo', file);
-                      const response = await fetch('/api/settings/sponsor-logo', {
+                      // Convert file to base64 for Cloudinary API
+                      const base64 = await fileToBase64(file);
+                      
+                      const response = await fetch('/api/upload/sponsor', {
                         method: 'POST',
-                        body: formData,
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          imageData: base64,
+                          filename: file.name
+                        }),
                       });
+                      
                       if (response.ok) {
+                        const result = await response.json();
                         queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
                         toast({
                           title: "Success",
-                          description: "Sponsor logo uploaded"
+                          description: "Sponsor logo uploaded to Cloudinary"
                         });
+                      } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Upload failed');
                       }
                     } catch (error) {
                       toast({
                         title: "Error",
-                        description: "Failed to upload sponsor logo",
+                        description: error instanceof Error ? error.message : "Failed to upload sponsor logo",
                         variant: "destructive"
                       });
                     }
