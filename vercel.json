@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "server/index-minimal.js",
+      "src": "server/index.js",
       "use": "@vercel/node"
     },
     {
@@ -16,7 +16,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server/index-minimal.js"
+      "dest": "/server/index.js"
     },
     {
       "src": "/(.*)",
