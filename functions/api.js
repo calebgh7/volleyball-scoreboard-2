@@ -1,4 +1,5 @@
-module.exports = (req, res) => {
+// Vercel serverless function handler
+export default function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -10,46 +11,21 @@ module.exports = (req, res) => {
     return;
   }
 
-  // Get the path from the request
-  const path = req.url || req.path || '';
-
   // Test endpoint
-  if (req.method === 'GET' && path.includes('/api/test')) {
+  if (req.method === 'GET') {
     return res.status(200).json({ 
       message: 'Serverless function working!', 
       timestamp: new Date().toISOString(),
-      version: '2.0.1',
-      path: path
-    });
-  }
-
-  // Health endpoint
-  if (req.method === 'GET' && path.includes('/api/health')) {
-    return res.status(200).json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      message: 'Serverless function healthy!',
-      version: '2.0.1',
-      path: path
-    });
-  }
-
-  // Cloudinary status endpoint
-  if (req.method === 'GET' && path.includes('/api/cloudinary/status')) {
-    return res.status(200).json({
-      configured: false,
-      message: 'Cloudinary integration pending - serverless function working',
-      timestamp: new Date().toISOString(),
-      path: path
+      version: '2.0.2',
+      method: req.method,
+      url: req.url
     });
   }
 
   // Default response
-  res.status(404).json({ 
-    error: 'Route not found',
-    path: path,
+  res.status(200).json({ 
+    message: 'Function is working!',
     method: req.method,
-    timestamp: new Date().toISOString(),
-    message: 'Function is working but route not matched'
+    timestamp: new Date().toISOString()
   });
-};
+}
