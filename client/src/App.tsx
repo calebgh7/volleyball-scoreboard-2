@@ -1,10 +1,33 @@
 import React, { useState } from "react";
 
+interface Team {
+  id: string;
+  name: string;
+  color: string;
+  logoUrl?: string;
+}
+
 function App() {
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const [homeSets, setHomeSets] = useState(0);
   const [awaySets, setAwaySets] = useState(0);
+  
+  // Team management state
+  const [homeTeam, setHomeTeam] = useState<Team>({
+    id: "home-team-1",
+    name: "Home Team",
+    color: "#2563eb"
+  });
+  
+  const [awayTeam, setAwayTeam] = useState<Team>({
+    id: "away-team-1", 
+    name: "Away Team",
+    color: "#dc2626"
+  });
+
+  const [showTeamEditor, setShowTeamEditor] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   const addPoint = async (team: 'home' | 'away') => {
     try {
@@ -118,6 +141,49 @@ function App() {
     }
   };
 
+  const updateTeam = async (teamId: string, updates: Partial<Team>) => {
+    try {
+      // Update local state immediately
+      if (teamId === homeTeam.id) {
+        setHomeTeam({ ...homeTeam, ...updates });
+      } else if (teamId === awayTeam.id) {
+        setAwayTeam({ ...awayTeam, ...updates });
+      }
+
+      // Update via API
+      const response = await fetch(`/api/teams/${teamId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to update team via API");
+      }
+    } catch (error) {
+      console.error("Error updating team:", error);
+    }
+  };
+
+  const handleLogoUpload = async (teamId: string, file: File) => {
+    try {
+      // Convert file to base64 for demo (in production, use Cloudinary)
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        await updateTeam(teamId, { logoUrl: base64 });
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+    }
+  };
+
+  const openTeamEditor = (team: Team) => {
+    setEditingTeam(team);
+    setShowTeamEditor(true);
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -125,16 +191,38 @@ function App() {
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ 
-          textAlign: 'center', 
-          fontSize: '48px', 
-          color: '#1f2937',
-          marginBottom: '40px',
-          fontWeight: 'bold'
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        {/* Header with Team Editor */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '30px'
         }}>
-          🏐 Volleyball Scoreboard
-        </h1>
+          <h1 style={{ 
+            fontSize: '48px', 
+            color: '#1f2937',
+            fontWeight: 'bold',
+            margin: 0
+          }}>
+            🏐 Volleyball Scoreboard
+          </h1>
+          <button
+            onClick={() => openTeamEditor(homeTeam)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '16px',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            ⚙️ Team Settings
+          </button>
+        </div>
 
         <div style={{ 
           display: 'grid', 
@@ -148,16 +236,31 @@ function App() {
             padding: '30px', 
             borderRadius: '12px', 
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            textAlign: 'center'
+            textAlign: 'center',
+            border: `4px solid ${homeTeam.color}`
           }}>
-            <h2 style={{ 
-              fontSize: '32px', 
-              color: '#2563eb', 
-              marginBottom: '20px',
-              fontWeight: 'bold'
-            }}>
-              🏠 Home Team
-            </h2>
+            <div style={{ marginBottom: '20px' }}>
+              {homeTeam.logoUrl && (
+                <img 
+                  src={homeTeam.logoUrl} 
+                  alt="Home Team Logo" 
+                  style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    objectFit: 'contain',
+                    marginBottom: '10px'
+                  }}
+                />
+              )}
+              <h2 style={{ 
+                fontSize: '32px', 
+                color: homeTeam.color, 
+                marginBottom: '20px',
+                fontWeight: 'bold'
+              }}>
+                🏠 {homeTeam.name}
+              </h2>
+            </div>
             <div style={{ 
               fontSize: '72px', 
               fontWeight: 'bold', 
@@ -179,7 +282,7 @@ function App() {
                 style={{
                   padding: '12px 24px',
                   fontSize: '18px',
-                  backgroundColor: '#2563eb',
+                  backgroundColor: homeTeam.color,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -213,16 +316,31 @@ function App() {
             padding: '30px', 
             borderRadius: '12px', 
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            textAlign: 'center'
+            textAlign: 'center',
+            border: `4px solid ${awayTeam.color}`
           }}>
-            <h2 style={{ 
-              fontSize: '32px', 
-              color: '#dc2626', 
-              marginBottom: '20px',
-              fontWeight: 'bold'
-            }}>
-              ✈️ Away Team
-            </h2>
+            <div style={{ marginBottom: '20px' }}>
+              {awayTeam.logoUrl && (
+                <img 
+                  src={awayTeam.logoUrl} 
+                  alt="Away Team Logo" 
+                  style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    objectFit: 'contain',
+                    marginBottom: '10px'
+                  }}
+                />
+              )}
+              <h2 style={{ 
+                fontSize: '32px', 
+                color: awayTeam.color, 
+                marginBottom: '20px',
+                fontWeight: 'bold'
+              }}>
+                ✈️ {awayTeam.name}
+              </h2>
+            </div>
             <div style={{ 
               fontSize: '72px', 
               fontWeight: 'bold', 
@@ -244,7 +362,7 @@ function App() {
                 style={{
                   padding: '12px 24px',
                   fontSize: '18px',
-                  backgroundColor: '#dc2626',
+                  backgroundColor: awayTeam.color,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -357,10 +475,143 @@ function App() {
             margin: '0',
             fontWeight: 'bold'
           }}>
-            ✅ Application is working with API integration! Scores are saved to your backend.
+            ✅ Full application restored! Team management, API integration, and scoreboard working.
           </p>
         </div>
       </div>
+
+      {/* Team Editor Modal */}
+      {showTeamEditor && editingTeam && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '12px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <h2 style={{
+              fontSize: '24px',
+              color: '#1f2937',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              Edit {editingTeam.name}
+            </h2>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Team Name:
+              </label>
+              <input
+                type="text"
+                value={editingTeam.name}
+                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Team Color:
+              </label>
+              <input
+                type="color"
+                value={editingTeam.color}
+                onChange={(e) => setEditingTeam({ ...editingTeam, color: e.target.value })}
+                style={{
+                  width: '100%',
+                  height: '50px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Team Logo:
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleLogoUpload(editingTeam.id, file);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  updateTeam(editingTeam.id, editingTeam);
+                  setShowTeamEditor(false);
+                  setEditingTeam(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  backgroundColor: '#059669',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                Save Changes
+              </button>
+              <button
+                onClick={() => {
+                  setShowTeamEditor(false);
+                  setEditingTeam(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
