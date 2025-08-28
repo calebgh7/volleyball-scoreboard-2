@@ -84,6 +84,157 @@ export default async function handler(req, res) {
     });
   }
 
+  // Team update endpoint
+  if (req.method === 'PATCH' && req.url.startsWith('/api/teams/')) {
+    try {
+      const teamId = req.url.split('/').pop();
+      const updates = req.body;
+      
+      console.log(`Updating team ${teamId} with:`, updates);
+      
+      // For now, just return success since we don't have a database
+      // In a real implementation, you would update the team in your database
+      return res.status(200).json({
+        message: 'Team updated successfully',
+        teamId: teamId,
+        updates: updates,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Team update failed:', error);
+      return res.status(500).json({ 
+        error: 'Team update failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // Match update endpoint
+  if (req.method === 'PATCH' && req.url.startsWith('/api/matches/')) {
+    try {
+      const matchId = req.url.split('/').pop();
+      const updates = req.body;
+      
+      console.log(`Updating match ${matchId} with:`, updates);
+      
+      // For now, just return success since we don't have a database
+      return res.status(200).json({
+        message: 'Match updated successfully',
+        matchId: matchId,
+        updates: updates,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Match update failed:', error);
+      return res.status(500).json({ 
+        error: 'Match update failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // Game state update endpoint
+  if (req.method === 'PATCH' && req.url.startsWith('/api/game-state/')) {
+    try {
+      const gameStateId = req.url.split('/').pop();
+      const updates = req.body;
+      
+      console.log(`Updating game state ${gameStateId} with:`, updates);
+      
+      // For now, just return success since we don't have a database
+      return res.status(200).json({
+        message: 'Game state updated successfully',
+        gameStateId: gameStateId,
+        updates: updates,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Game state update failed:', error);
+      return res.status(500).json({ 
+        error: 'Game state update failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // Score update endpoint
+  if (req.method === 'PATCH' && req.url === '/api/scores') {
+    try {
+      const { matchId, homeScore, awayScore } = req.body;
+      
+      console.log(`Updating scores for match ${matchId}:`, { homeScore, awayScore });
+      
+      // For now, just return success since we don't have a database
+      return res.status(200).json({
+        message: 'Scores updated successfully',
+        matchId: matchId,
+        homeScore: homeScore,
+        awayScore: awayScore,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Score update failed:', error);
+      return res.status(500).json({ 
+        error: 'Score update failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // Set completion endpoint
+  if (req.method === 'POST' && req.url === '/api/sets/complete') {
+    try {
+      const { matchId, homeScore, awayScore, setNumber, setHistory } = req.body;
+      
+      console.log(`Completing set ${setNumber} for match ${matchId}:`, { homeScore, awayScore, setHistory });
+      
+      // For now, just return success since we don't have a database
+      return res.status(200).json({
+        message: 'Set completed successfully',
+        matchId: matchId,
+        setNumber: setNumber,
+        homeScore: homeScore,
+        awayScore: awayScore,
+        setHistory: setHistory,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Set completion failed:', error);
+      return res.status(500).json({ 
+        error: 'Set completion failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // Reset scores endpoint
+  if (req.method === 'POST' && req.url === '/api/scores/reset') {
+    try {
+      const { matchId } = req.body;
+      
+      console.log(`Resetting scores for match ${matchId}`);
+      
+      // For now, just return success since we don't have a database
+      return res.status(200).json({
+        message: 'Scores reset successfully',
+        matchId: matchId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Score reset failed:', error);
+      return res.status(500).json({ 
+        error: 'Score reset failed', 
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
   // Cloudinary status endpoint
   if (req.method === 'GET' && req.url === '/api/cloudinary/status') {
     try {
