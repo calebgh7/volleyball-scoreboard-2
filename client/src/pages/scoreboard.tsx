@@ -29,6 +29,10 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
+  // Debug logging to see when data changes
+  console.log('Scoreboard render - currentMatch:', currentMatch);
+  console.log('Scoreboard render - isLoading:', isLoading);
+
   const openOverlayWindow = () => {
     const overlayUrl = `${window.location.origin}/?overlay=true`;
     window.open(overlayUrl, 'Scoreboard Overlay', 'width=1920,height=1080,toolbar=no,menubar=no,scrollbars=no,status=no');

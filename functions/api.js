@@ -32,6 +32,58 @@ export default async function handler(req, res) {
     });
   }
 
+  // Current match endpoint (placeholder for now)
+  if (req.method === 'GET' && req.url === '/api/current-match') {
+    return res.status(200).json({
+      match: {
+        id: 'demo-match-1',
+        currentSet: 1,
+        format: 3,
+        homeSetsWon: 0,
+        awaySetsWon: 0,
+        setHistory: []
+      },
+      homeTeam: {
+        id: 'home-team-1',
+        name: 'Home Team',
+        logoPath: null,
+        colorScheme: 'pink',
+        customColor: null,
+        customTextColor: null,
+        customSetBackgroundColor: null
+      },
+      awayTeam: {
+        id: 'away-team-1',
+        name: 'Away Team',
+        logoPath: null,
+        colorScheme: 'cyan',
+        customColor: null,
+        customTextColor: null,
+        customSetBackgroundColor: null
+      },
+      gameState: {
+        homeScore: 0,
+        awayScore: 0,
+        displayOptions: {
+          showSetHistory: true,
+          showSponsors: true,
+          showTimer: true
+        },
+        theme: 'default'
+      }
+    });
+  }
+
+  // Settings endpoint (placeholder for now)
+  if (req.method === 'GET' && req.url === '/api/settings') {
+    return res.status(200).json({
+      primaryColor: '#3b82f6',
+      accentColor: '#f59e0b',
+      sponsorLogoPath: null,
+      sponsorLogoPublicId: null
+    });
+  }
+
   // Cloudinary status endpoint
   if (req.method === 'GET' && req.url === '/api/cloudinary/status') {
     try {

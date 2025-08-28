@@ -14,11 +14,16 @@ export default function ScoreboardDisplay({ data, isOverlay = false }: Scoreboar
 
   // Fetch settings for sponsor logo
   useEffect(() => {
+    // Only fetch settings if we don't already have them
+    if (settings) return;
+    
+    console.log('Fetching settings...');
     const fetchSettings = async () => {
       try {
         const response = await fetch('/api/settings');
         if (response.ok) {
           const settingsData = await response.json();
+          console.log('Settings fetched:', settingsData);
           setSettings(settingsData);
         }
       } catch (error) {
@@ -27,7 +32,7 @@ export default function ScoreboardDisplay({ data, isOverlay = false }: Scoreboar
     };
     
     fetchSettings();
-  }, []);
+  }, [settings]); // Add settings as dependency to prevent unnecessary fetches
 
   if (!data) {
     return (
