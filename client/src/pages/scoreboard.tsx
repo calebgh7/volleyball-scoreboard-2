@@ -9,7 +9,7 @@ export default function Scoreboard() {
   return (
     <div style={{ padding: "40px", fontFamily: "Arial, sans-serif" }}>
       <h1 style={{ color: "red", textAlign: "center", marginBottom: "40px" }}>
-        🚨 MINIMAL REACT TEST 🚨
+        �� MINIMAL REACT TEST (FROM SCOREBOARD) 🚨
       </h1>
       
       <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", marginBottom: "30px" }}>
@@ -28,7 +28,7 @@ export default function Scoreboard() {
           <strong>Current value:</strong> <span style={{ color: "#28a745" }}>{testInput}</span>
         </p>
       </div>
-      
+
       <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", marginBottom: "30px" }}>
         <h2 style={{ color: "#495057", marginBottom: "20px" }}>Test 2: Button Click</h2>
         <button
@@ -44,7 +44,7 @@ export default function Scoreboard() {
           <strong>Total clicks:</strong> <span style={{ color: "#28a745" }}>{testCount}</span>
         </p>
       </div>
-      
+
       <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", marginBottom: "30px" }}>
         <h2 style={{ color: "#495057", marginBottom: "20px" }}>Test 3: State Display</h2>
         <div style={{ backgroundColor: "#e9ecef", padding: "20px", borderRadius: "5px", fontFamily: "monospace", fontSize: "14px" }}>
@@ -53,7 +53,7 @@ export default function Scoreboard() {
           <p><strong>Timestamp:</strong> {new Date().toLocaleTimeString()}</p>
         </div>
       </div>
-      
+
       <div style={{ backgroundColor: "#fff3cd", border: "1px solid #ffeaa7", borderRadius: "5px", padding: "20px", textAlign: "center" }}>
         <h3 style={{ color: "#856404", marginBottom: "15px" }}>🧪 Instructions</h3>
         <ol style={{ textAlign: "left", color: "#856404" }}>
@@ -64,7 +64,7 @@ export default function Scoreboard() {
           <li><strong>If neither works</strong> - React is completely broken</li>
         </ol>
       </div>
-      
+
       <div style={{ backgroundColor: "#d1ecf1", border: "1px solid #bee5eb", borderRadius: "5px", padding: "20px", marginTop: "30px", textAlign: "center" }}>
         <h3 style={{ color: "#0c5460" }}>🔍 Debug Information</h3>
         <p style={{ color: "#0c5460", fontSize: "14px" }}>
