@@ -6,35 +6,116 @@ function App() {
   const [homeSets, setHomeSets] = useState(0);
   const [awaySets, setAwaySets] = useState(0);
 
-  const addPoint = (team: 'home' | 'away') => {
-    if (team === 'home') {
-      setHomeScore(homeScore + 1);
-    } else {
-      setAwayScore(awayScore + 1);
+  const addPoint = async (team: 'home' | 'away') => {
+    try {
+      const newHomeScore = team === 'home' ? homeScore + 1 : homeScore;
+      const newAwayScore = team === 'away' ? awayScore + 1 : awayScore;
+      
+      // Update local state immediately
+      if (team === 'home') {
+        setHomeScore(newHomeScore);
+      } else {
+        setAwayScore(newAwayScore);
+      }
+
+      // Update via API
+      const response = await fetch("/api/scores", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          homeScore: newHomeScore,
+          awayScore: newAwayScore
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to update scores via API");
+      }
+    } catch (error) {
+      console.error("Error updating score:", error);
     }
   };
 
-  const subtractPoint = (team: 'home' | 'away') => {
-    if (team === 'home') {
-      setHomeScore(Math.max(0, homeScore - 1));
-    } else {
-      setAwayScore(Math.max(0, awayScore - 1));
+  const subtractPoint = async (team: 'home' | 'away') => {
+    try {
+      const newHomeScore = team === 'home' ? Math.max(0, homeScore - 1) : homeScore;
+      const newAwayScore = team === 'away' ? Math.max(0, awayScore - 1) : awayScore;
+      
+      // Update local state immediately
+      if (team === 'home') {
+        setHomeScore(newHomeScore);
+      } else {
+        setAwayScore(newAwayScore);
+      }
+
+      // Update via API
+      const response = await fetch("/api/scores", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          homeScore: newHomeScore,
+          awayScore: newAwayScore
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to update scores via API");
+      }
+    } catch (error) {
+      console.error("Error updating score:", error);
     }
   };
 
-  const completeSet = (winner: 'home' | 'away') => {
-    if (winner === 'home') {
-      setHomeSets(homeSets + 1);
-    } else {
-      setAwaySets(awaySets + 1);
+  const completeSet = async (winner: 'home' | 'away') => {
+    try {
+      // Update local state immediately
+      if (winner === 'home') {
+        setHomeSets(homeSets + 1);
+      } else {
+        setAwaySets(awaySets + 1);
+      }
+      setHomeScore(0);
+      setAwayScore(0);
+
+      // Update via API
+      const response = await fetch("/api/sets/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          matchId: "demo-match-1",
+          winner 
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to complete set via API");
+      }
+    } catch (error) {
+      console.error("Error completing set:", error);
     }
-    setHomeScore(0);
-    setAwayScore(0);
   };
 
-  const resetScores = () => {
-    setHomeScore(0);
-    setAwayScore(0);
+  const resetScores = async () => {
+    try {
+      // Update local state immediately
+      setHomeScore(0);
+      setAwayScore(0);
+
+      // Update via API
+      const response = await fetch("/api/scores/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          matchId: "demo-match-1"
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to reset scores via API");
+      }
+    } catch (error) {
+      console.error("Error resetting scores:", error);
+    }
   };
 
   return (
@@ -276,7 +357,7 @@ function App() {
             margin: '0',
             fontWeight: 'bold'
           }}>
-            ✅ Application is working! You can now track volleyball scores.
+            ✅ Application is working with API integration! Scores are saved to your backend.
           </p>
         </div>
       </div>
