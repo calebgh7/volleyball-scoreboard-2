@@ -17,8 +17,8 @@ app.get('/api/health', async (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    message: 'API server running (root api directory)',
-    version: '1.0.3'
+    message: 'API server running (catch-all route)',
+    version: '1.0.4'
   });
 });
 
@@ -93,9 +93,9 @@ app.delete('/api/upload/:publicId', async (req, res) => {
 // Test endpoint
 app.get('/api/test', (req, res) => {
   res.json({ 
-    message: 'API server is working! (root api directory)', 
+    message: 'API server is working! (catch-all route)', 
     timestamp: new Date().toISOString(),
-    version: '1.0.3'
+    version: '1.0.4'
   });
 });
 
