@@ -22,6 +22,10 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
   const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
+  
+  // Simple test state to see if React is working
+  const [testInput, setTestInput] = useState("Test Input");
+  const [testCount, setTestCount] = useState(0);
 
   const { data: currentMatch, isLoading } = useQuery({
     queryKey: ['/api/current-match'],
@@ -311,6 +315,45 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
+          
+          {/* Simple Test Section */}
+          <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-yellow-800 mb-3">🧪 React Functionality Test</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-yellow-700 mb-2">Test Input:</label>
+                <input
+                  type="text"
+                  value={testInput}
+                  onChange={(e) => {
+                    console.log("🔧 Test input changed to:", e.target.value);
+                    setTestInput(e.target.value);
+                  }}
+                  className="w-full px-3 py-2 border border-yellow-400 rounded-md text-yellow-900"
+                  placeholder="Type here to test React"
+                />
+                <p className="text-sm text-yellow-600 mt-1">Current value: <strong>{testInput}</strong></p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-yellow-700 mb-2">Test Button:</label>
+                <button
+                  onClick={() => {
+                    console.log("🔧 Test button clicked! Count:", testCount + 1);
+                    setTestCount(testCount + 1);
+                  }}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+                >
+                  Click Me ({testCount})
+                </button>
+                <p className="text-sm text-yellow-600 mt-1">Clicks: <strong>{testCount}</strong></p>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-yellow-600">
+              <p>If you can type in the input and click the button, React is working!</p>
+              <p>Check the browser console for debug logs.</p>
+            </div>
+          </div>
+          
           {/* Scoreboard Display */}
           <div>
             <ScoreboardDisplay data={currentMatch} />
