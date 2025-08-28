@@ -196,7 +196,7 @@ export class CloudStorageService {
       width: size,
       height: size,
       crop: 'fill',
-      quality: 'auto',
+      quality: 80,
     });
   }
 

@@ -1,5 +1,5 @@
-import * as express from 'express';
-import * as cors from 'cors';
+import express, { Request, Response } from 'express';
+import cors from 'cors';
 import { databaseStorage } from './database-storage.js';
 import { registerUser, loginUser, authenticateUser, logoutUser } from './auth-simple.js';
 import { authenticateToken } from './auth-middleware.js';
@@ -19,62 +19,48 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Initialize database on startup
 async function initializeServer() {
   try {
-    console.log('🚀 Initializing server...');
+    console.log('🔍 Checking database health...');
+    const health = await databaseStorage.checkHealth();
+    console.log('📊 Database health:', health);
     
-    // Test database connection
-    const dbHealth = await databaseStorage.checkHealth();
-    if (dbHealth.connected) {
-      console.log('✅ Database connected successfully');
-      
-      // Run migrations
-      try {
-        await databaseStorage.runMigrations();
-        console.log('✅ Database migrations completed');
-      } catch (migrationError) {
-        console.log('⚠️ Database migrations failed, continuing with existing schema:', migrationError);
-      }
+    if (health.connected) {
+      console.log('✅ Database connected, running migrations...');
+      await databaseStorage.runMigrations();
     } else {
-      console.log('⚠️ Database not available, using in-memory storage');
+      console.log('⚠️ Database not available, using in-memory fallback');
     }
-    
-    console.log('✅ Server initialization complete');
   } catch (error) {
-    console.error('❌ Server initialization failed:', error);
-    console.log('⚠️ Continuing with limited functionality');
+    console.log('⚠️ Database initialization failed, using in-memory fallback');
   }
 }
 
 // Health check endpoint
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', async (req: Request, res: Response) => {
   try {
-    const dbHealth = await databaseStorage.checkHealth();
+    const health = await databaseStorage.checkHealth();
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      database: dbHealth,
+      database: health,
       uptime: process.uptime()
     });
   } catch (error) {
-    res.status(500).json({
+    res.json({
       status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString()
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
     });
   }
 });
 
 // Authentication endpoints
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body;
-    
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Email, password, and name are required' });
-    }
-    
     const result = await registerUser(email, password, name);
     
-    if (result.success) {
+    if (result.success && result.user) {
       res.json({
         message: 'User registered successfully',
         user: {
@@ -85,7 +71,7 @@ app.post('/api/auth/register', async (req, res) => {
         token: result.token
       });
     } else {
-      res.status(400).json({ error: result.error });
+      res.status(400).json({ error: result.error || 'Registration failed' });
     }
   } catch (error) {
     console.error('Registration error:', error);
@@ -93,17 +79,12 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-    
     const result = await loginUser(email, password);
     
-    if (result.success) {
+    if (result.success && result.user) {
       res.json({
         message: 'Login successful',
         user: {
@@ -114,7 +95,7 @@ app.post('/api/auth/login', async (req, res) => {
         token: result.token
       });
     } else {
-      res.status(401).json({ error: result.error });
+      res.status(401).json({ error: result.error || 'Login failed' });
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -122,37 +103,26 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+app.post('/api/auth/logout', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(400).json({ error: 'Token is required' });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await logoutUser(token);
     }
-    
-    const result = await logoutUser(token);
-    
-    if (result.success) {
-      res.json({ message: 'Logout successful' });
-    } else {
-      res.status(400).json({ error: result.error });
-    }
+    res.json({ message: 'Logout successful' });
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
   }
 });
 
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/auth/me', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(400).json({ error: 'Token is required' });
-    }
+    const result = await authenticateUser(req.headers.authorization?.split(' ')[1] || '');
     
-    const result = await authenticateUser(token);
-    
-    if (result.success) {
+    if (result.success && result.user) {
       res.json({
+        message: 'Authentication successful',
         user: {
           id: result.user.id,
           email: result.user.email,
@@ -160,7 +130,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
         }
       });
     } else {
-      res.status(401).json({ error: result.error });
+      res.status(401).json({ error: result.error || 'Authentication failed' });
     }
   } catch (error) {
     console.error('Auth check error:', error);
@@ -168,8 +138,8 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Scoreboard data endpoints
-app.get('/api/current-match', async (req, res) => {
+// Match and game state endpoints
+app.get('/api/current-match', async (req: Request, res: Response) => {
   try {
     const match = await databaseStorage.getCurrentMatch();
     res.json(match || { message: 'No current match' });
@@ -179,7 +149,7 @@ app.get('/api/current-match', async (req, res) => {
   }
 });
 
-app.get('/api/game-state', async (req, res) => {
+app.get('/api/game-state', async (req: Request, res: Response) => {
   try {
     const gameState = await databaseStorage.getCurrentGameState();
     res.json(gameState || { message: 'No game state available' });
@@ -189,7 +159,7 @@ app.get('/api/game-state', async (req, res) => {
   }
 });
 
-app.get('/api/matches', authenticateToken, async (req, res) => {
+app.get('/api/matches', authenticateToken, async (req: Request, res: Response) => {
   try {
     const matches = await databaseStorage.getAllMatches();
     res.json(matches);
@@ -199,7 +169,8 @@ app.get('/api/matches', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/teams', async (req, res) => {
+// Team management endpoints
+app.get('/api/teams', async (req: Request, res: Response) => {
   try {
     const teams = await databaseStorage.getAllTeams();
     res.json(teams);
@@ -209,7 +180,7 @@ app.get('/api/teams', async (req, res) => {
   }
 });
 
-app.post('/api/teams', authenticateToken, async (req, res) => {
+app.post('/api/teams', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -223,7 +194,6 @@ app.post('/api/teams', authenticateToken, async (req, res) => {
     }
     
     const team = await databaseStorage.createTeam({
-      id: Math.floor(Math.random() * 10000) + 1, // Simple ID generation for now
       userId,
       name,
       location: location || '',
@@ -245,7 +215,7 @@ app.post('/api/teams', authenticateToken, async (req, res) => {
   }
 });
 
-app.patch('/api/teams/:id', authenticateToken, async (req, res) => {
+app.patch('/api/teams/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -276,7 +246,7 @@ app.patch('/api/teams/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/api/teams/:id', authenticateToken, async (req, res) => {
+app.delete('/api/teams/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -303,7 +273,8 @@ app.delete('/api/teams/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/settings', authenticateToken, async (req, res) => {
+// Settings endpoints
+app.get('/api/settings', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -318,7 +289,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
   }
 });
 
-app.patch('/api/settings', authenticateToken, async (req, res) => {
+app.patch('/api/settings', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -337,7 +308,6 @@ app.patch('/api/settings', authenticateToken, async (req, res) => {
     } else {
       // Create new settings
       const newSettings = await databaseStorage.createSettings({
-        id: Math.floor(Math.random() * 10000) + 1,
         userId,
         sponsorLogoPath: null,
         sponsorLogoPublicId: null,
@@ -358,7 +328,7 @@ app.patch('/api/settings', authenticateToken, async (req, res) => {
 });
 
 // Template management endpoints
-app.get('/api/templates', authenticateToken, async (req, res) => {
+app.get('/api/templates', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -373,25 +343,31 @@ app.get('/api/templates', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/templates', authenticateToken, async (req, res) => {
+app.post('/api/templates', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    const { name, description, data } = req.body;
+    const { name, homeTeamId, awayTeamId, settings, description } = req.body;
     
-    if (!name || !data) {
-      return res.status(400).json({ error: 'Name and data are required' });
+    if (!name) {
+      return res.status(400).json({ error: 'Template name is required' });
     }
     
     const template = await databaseStorage.createTemplate({
-      id: crypto.randomUUID(),
       userId,
       name,
+      homeTeamId: homeTeamId || null,
+      awayTeamId: awayTeamId || null,
+      settings: settings || {
+        theme: 'default',
+        displayOptions: { showSetHistory: true, showSponsors: true, showTimer: false },
+        primaryColor: '#1565C0',
+        accentColor: '#FF6F00'
+      },
       description: description || '',
-      data,
       isPublic: false,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -404,7 +380,7 @@ app.post('/api/templates', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/templates/:id', async (req, res) => {
+app.get('/api/templates/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const template = await databaseStorage.findTemplateById(id);
@@ -420,7 +396,7 @@ app.get('/api/templates/:id', async (req, res) => {
   }
 });
 
-app.put('/api/templates/:id', authenticateToken, async (req, res) => {
+app.put('/api/templates/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -451,7 +427,7 @@ app.put('/api/templates/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
+app.delete('/api/templates/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -479,7 +455,7 @@ app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
 });
 
 // Image upload endpoints
-app.post('/api/upload/logo', authenticateToken, async (req, res) => {
+app.post('/api/upload/logo', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { imageData, filename, teamId } = req.body;
     const userId = req.user?.id;
@@ -524,11 +500,11 @@ app.post('/api/upload/logo', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Logo upload failed:', error);
-    res.status(500).json({ error: error.message || 'Logo upload failed' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Logo upload failed' });
   }
 });
 
-app.post('/api/upload/sponsor', authenticateToken, async (req, res) => {
+app.post('/api/upload/sponsor', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { imageData, filename } = req.body;
     const userId = req.user?.id;
@@ -571,11 +547,11 @@ app.post('/api/upload/sponsor', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Sponsor logo upload failed:', error);
-    res.status(500).json({ error: error.message || 'Sponsor logo upload failed' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Sponsor logo upload failed' });
   }
 });
 
-app.delete('/api/upload/:publicId', authenticateToken, async (req, res) => {
+app.delete('/api/upload/:publicId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { publicId } = req.params;
     
@@ -593,12 +569,12 @@ app.delete('/api/upload/:publicId', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error('Image deletion failed:', error);
-    res.status(500).json({ error: error.message || 'Image deletion failed' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Image deletion failed' });
   }
 });
 
 // Cloudinary status endpoint
-app.get('/api/cloudinary/status', async (req, res) => {
+app.get('/api/cloudinary/status', async (req: Request, res: Response) => {
   try {
     if (!cloudStorage.isConfigured()) {
       return res.json({
@@ -619,25 +595,31 @@ app.get('/api/cloudinary/status', async (req, res) => {
 });
 
 // Cleanup endpoint for test users
-app.delete('/api/cleanup-test-users', async (req, res) => {
+app.delete('/api/cleanup-test-users', async (req: Request, res: Response) => {
   try {
     const users = await databaseStorage.getAllUsers();
     let deletedCount = 0;
     
     for (const user of users) {
-      if (user.email.includes('test') || user.email.includes('@example.com')) {
-        await databaseStorage.deleteUser(user.id);
-        deletedCount++;
+      if (user.email.includes('test') || user.email.includes('example')) {
+        try {
+          await databaseStorage.deleteUser(user.id);
+          deletedCount++;
+        } catch (error) {
+          console.log(`Failed to delete user ${user.id}:`, error);
+        }
       }
     }
     
-    res.json({ 
-      message: `Deleted ${deletedCount} test users`,
-      deletedCount 
+    res.json({
+      success: true,
+      message: `Cleanup completed. Deleted ${deletedCount} test users.`,
+      deletedCount,
+      totalUsers: users.length
     });
   } catch (error) {
-    console.error('Error cleaning up test users:', error);
-    res.status(500).json({ error: 'Failed to cleanup test users' });
+    console.error('Cleanup error:', error);
+    res.status(500).json({ error: 'Cleanup failed' });
   }
 });
 
@@ -646,5 +628,3 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   initializeServer();
 });
-
-export default app;
