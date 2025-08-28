@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "functions": {
-    "functions/api.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "builds": [
+    {
+      "src": "functions/api.js",
+      "use": "@vercel/node"
+    },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
