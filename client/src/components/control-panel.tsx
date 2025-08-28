@@ -34,6 +34,7 @@ interface ControlPanelProps {
       name: string;
       logoPath?: string;
       colorScheme: string;
+      customColor?: string;
       customTextColor?: string;
       customSetBackgroundColor?: string;
     };

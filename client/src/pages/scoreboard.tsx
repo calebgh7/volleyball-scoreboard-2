@@ -27,7 +27,44 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
   const [testInput, setTestInput] = useState("Test Input");
   const [testCount, setTestCount] = useState(0);
 
-  const { data: currentMatch, isLoading } = useQuery({
+  const { data: currentMatch, isLoading } = useQuery<{
+    match: {
+      id: string;
+      currentSet: number;
+      format: number;
+      homeSetsWon: number;
+      awaySetsWon: number;
+      setHistory: Array<{setNumber: number, homeScore: number, awayScore: number, winner: 'home' | 'away' | null}>;
+    };
+    homeTeam: {
+      id: string;
+      name: string;
+      logoPath?: string;
+      colorScheme: string;
+      customColor?: string;
+      customTextColor?: string;
+      customSetBackgroundColor?: string;
+    };
+    awayTeam: {
+      id: string;
+      name: string;
+      logoPath?: string;
+      colorScheme: string;
+      customColor?: string;
+      customTextColor?: string;
+      customSetBackgroundColor?: string;
+    };
+    gameState: {
+      homeScore: number;
+      awayScore: number;
+      displayOptions: {
+        showSetHistory: boolean;
+        showSponsors: boolean;
+        showTimer: boolean;
+      };
+    };
+    settings?: any;
+  }>({
     queryKey: ['/api/current-match'],
     refetchInterval: false, // Disable automatic refetching to prevent page refreshes
     staleTime: 30000, // Data is fresh for 30 seconds
@@ -236,11 +273,74 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading scoreboard...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                  <i className="fas fa-volleyball-ball text-white text-lg"></i>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">VolleyScore Pro</h1>
+                  <p className="text-sm text-gray-500">Live Streaming Scoreboard</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-6">
+            
+            {/* Simple Test Section - Show even while loading */}
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-yellow-800 mb-3">🧪 React Functionality Test (Loading State)</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-yellow-700 mb-2">Test Input:</label>
+                  <input
+                    type="text"
+                    value={testInput}
+                    onChange={(e) => {
+                      console.log("🔧 Test input changed to:", e.target.value);
+                      setTestInput(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 border border-yellow-400 rounded-md text-yellow-900"
+                    placeholder="Type here to test React"
+                  />
+                  <p className="text-sm text-yellow-600 mt-1">Current value: <strong>{testInput}</strong></p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-yellow-700 mb-2">Test Button:</label>
+                  <button
+                    onClick={() => {
+                      console.log("🔧 Test button clicked! Count:", testCount + 1);
+                      setTestCount(testCount + 1);
+                    }}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+                  >
+                    Click Me ({testCount})
+                  </button>
+                  <p className="text-sm text-yellow-600 mt-1">Clicks: <strong>{testCount}</strong></p>
+                </div>
+              </div>
+              <div className="mt-3 text-xs text-yellow-600">
+                <p>If you can type in the input and click the button, React is working!</p>
+                <p>Check the browser console for debug logs.</p>
+                <p><strong>Status: Loading data...</strong></p>
+              </div>
+            </div>
+            
+            {/* Loading Spinner */}
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading scoreboard...</p>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

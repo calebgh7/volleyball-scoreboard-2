@@ -6,10 +6,10 @@ import { queryClient } from "@/lib/queryClient";
 import { Upload, X, Image, AlertCircle, CheckCircle } from "lucide-react";
 
 interface LogoUploadProps {
-  teamId: number;
+  teamId: string;
   currentLogo?: string | null;
-  label: string;
-  onLogoChange?: (logoPath: string) => void;
+  label?: string;
+  onLogoChange?: (logoUrl: string) => void;
 }
 
 interface ImageValidation {
@@ -284,7 +284,7 @@ export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }:
             <div className="text-center relative group">
               <img 
                 src={displayLogo} 
-                alt={label}
+                alt={label || 'Logo'}
                 className="h-16 w-16 object-cover rounded mx-auto mb-1 shadow-sm"
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
@@ -308,7 +308,7 @@ export default function LogoUpload({ teamId, currentLogo, label, onLogoChange }:
           ) : (
             <div className="text-center">
               <Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" />
-              <p className="text-xs text-gray-500">{label}</p>
+              <p className="text-xs text-gray-500">{label || 'Click or drag to upload'}</p>
               <p className="text-xs text-gray-400 mt-1">Click or drag to upload</p>
             </div>
           )}
