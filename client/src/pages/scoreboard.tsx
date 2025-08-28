@@ -462,7 +462,7 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
           {/* Control Panel */}
           <div>
             <ControlPanel 
-              data={currentMatch}
+              data={currentMatch || null}
               onScoreUpdate={handleScoreUpdate}
               onTeamUpdate={handleTeamUpdate}
               onSetsWonUpdate={handleSetsWonUpdate}
