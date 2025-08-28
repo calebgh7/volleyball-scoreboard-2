@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ 
       message: 'Serverless function working with Cloudinary!', 
       timestamp: new Date().toISOString(),
-      version: '3.0.3',
+      version: '3.0.4',
       method: req.method,
       url: req.url
     });
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       message: 'Serverless function healthy with Cloudinary!',
-      version: '3.0.3'
+      version: '3.0.4'
     });
   }
 
@@ -86,7 +86,7 @@ export default async function handler(req, res) {
 
       // Try to use Cloudinary if available
       try {
-        const cloudinary = require('cloudinary').v2;
+        const { v2: cloudinary } = await import('cloudinary');
         cloudinary.config({
           cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
           api_key: process.env.CLOUDINARY_API_KEY,
@@ -158,7 +158,7 @@ export default async function handler(req, res) {
 
       // Try to use Cloudinary if available
       try {
-        const cloudinary = require('cloudinary').v2;
+        const { v2: cloudinary } = await import('cloudinary');
         cloudinary.config({
           cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
           api_key: process.env.CLOUDINARY_API_KEY,
@@ -226,7 +226,7 @@ export default async function handler(req, res) {
 
       // Try to use Cloudinary if available
       try {
-        const cloudinary = require('cloudinary').v2;
+        const { v2: cloudinary } = await import('cloudinary');
         cloudinary.config({
           cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
           api_key: process.env.CLOUDINARY_API_KEY,
