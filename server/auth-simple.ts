@@ -1,5 +1,5 @@
-import bcryptjs from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import * as bcryptjs from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { databaseStorage } from './database-storage.js';
 

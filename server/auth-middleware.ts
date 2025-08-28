@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 // Simple, hardcoded JWT secret for reliability
 const JWT_SECRET = 'volleyball-scoreboard-secret-key-2024';

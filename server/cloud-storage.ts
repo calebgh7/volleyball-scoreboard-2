@@ -36,7 +36,7 @@ export class CloudStorageService {
     allowedFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
     maxFileSize: 5 * 1024 * 1024, // 5MB
     transformation: {
-      quality: 'auto',
+      quality: 80,
       crop: 'limit'
     }
   };
@@ -170,7 +170,7 @@ export class CloudStorageService {
         width: options.width,
         height: options.height,
         crop: options.crop || 'limit',
-        quality: options.quality || 'auto',
+        quality: options.quality || 80,
         format: options.format || 'auto',
       };
 

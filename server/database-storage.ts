@@ -1,8 +1,8 @@
 import { eq, and, desc } from 'drizzle-orm';
-import { 
+import {
   teams, matches, gameState, settings, users, userSessions, scoreboardTemplates,
   type InsertTeam, type InsertMatch, type InsertGameState, type InsertSettings,
-  type InsertUser, type InsertUserSession, type InsertScoreboardTemplate
+  type InsertUser, type InsertScoreboardTemplate
 } from '../shared/schema.js';
 
 // Lazy database connection
@@ -31,7 +31,7 @@ export class DatabaseStorage {
       if (!database) {
         return { connected: false, status: 'Database not available' };
       }
-      
+
       // Test connection with a simple query
       await database.select().from(users).limit(1);
       return { connected: true, status: 'Connected' };
@@ -47,7 +47,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       // For now, just return success - migrations would be handled by drizzle-kit
       return true;
     } catch (error) {
@@ -62,7 +62,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newUser] = await database.insert(users).values(userData).returning();
       return newUser;
     } catch (error) {
@@ -77,7 +77,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [user] = await database.select().from(users).where(eq(users.email, email));
       return user || null;
     } catch (error) {
@@ -92,7 +92,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [user] = await database.select().from(users).where(eq(users.id, id));
       return user || null;
     } catch (error) {
@@ -107,7 +107,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [updatedUser] = await database
         .update(users)
         .set({ ...updates, updatedAt: new Date() })
@@ -127,7 +127,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newSession] = await database.insert(userSessions).values(sessionData).returning();
       return newSession;
     } catch (error) {
@@ -142,7 +142,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [session] = await database.select().from(userSessions).where(eq(userSessions.token, token));
       return session || null;
     } catch (error) {
@@ -157,7 +157,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(userSessions).where(eq(userSessions.token, token));
       return true;
     } catch (error) {
@@ -173,7 +173,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newTeam] = await database.insert(teams).values(teamData).returning();
       return newTeam;
     } catch (error) {
@@ -188,7 +188,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [team] = await database.select().from(teams).where(eq(teams.id, id));
       return team || null;
     } catch (error) {
@@ -203,7 +203,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [updatedTeam] = await database
         .update(teams)
         .set({ ...updates, updatedAt: new Date() })
@@ -222,7 +222,7 @@ export class DatabaseStorage {
       if (!database) {
         return [];
       }
-      
+
       return await database.select().from(teams).orderBy(teams.name);
     } catch (error) {
       console.error('Failed to get all teams:', error);
@@ -237,7 +237,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newMatch] = await database.insert(matches).values(matchData).returning();
       return newMatch;
     } catch (error) {
@@ -252,7 +252,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [match] = await database.select().from(matches).where(eq(matches.id, id));
       return match || null;
     } catch (error) {
@@ -267,7 +267,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [updatedMatch] = await database
         .update(matches)
         .set({ ...updates, updatedAt: new Date() })
@@ -286,7 +286,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [match] = await database
         .select()
         .from(matches)
@@ -306,7 +306,7 @@ export class DatabaseStorage {
       if (!database) {
         return [];
       }
-      
+
       return await database.select().from(matches).orderBy(desc(matches.updatedAt));
     } catch (error) {
       console.error('Failed to get all matches:', error);
@@ -321,7 +321,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newGameState] = await database.insert(gameState).values(gameStateData).returning();
       return newGameState;
     } catch (error) {
@@ -336,7 +336,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [state] = await database.select().from(gameState).where(eq(gameState.matchId, matchId));
       return state || null;
     } catch (error) {
@@ -351,7 +351,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [updatedState] = await database
         .update(gameState)
         .set({ ...updates, updatedAt: new Date() })
@@ -370,12 +370,12 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const currentMatch = await this.getCurrentMatch();
       if (!currentMatch) {
         return null;
       }
-      
+
       return await this.findGameStateByMatchId(currentMatch.id);
     } catch (error) {
       console.error('Failed to get current game state:', error);
@@ -390,7 +390,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newSettings] = await database.insert(settings).values(settingsData).returning();
       return newSettings;
     } catch (error) {
@@ -405,7 +405,7 @@ export class DatabaseStorage {
       if (!database) {
         return null;
       }
-      
+
       const [userSettings] = await database.select().from(settings).where(eq(settings.userId, userId));
       return userSettings || null;
     } catch (error) {
@@ -420,7 +420,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [updatedSettings] = await database
         .update(settings)
         .set({ ...updates, updatedAt: new Date() })
@@ -440,7 +440,7 @@ export class DatabaseStorage {
       if (!database) {
         throw new Error('Database not available');
       }
-      
+
       const [newTemplate] = await database.insert(scoreboardTemplates).values(templateData).returning();
       return newTemplate;
     } catch (error) {
@@ -449,48 +449,49 @@ export class DatabaseStorage {
     }
   }
 
-  async findTemplateById(id: string) {
-    try {
-      const database = await getDb();
-      if (!database) {
-        return null;
-      }
-      
-      const [template] = await database.select().from(scoreboardTemplates).where(eq(scoreboardTemplates.id, id));
-      return template || null;
-    } catch (error) {
-      console.error('Failed to find template by ID:', error);
-      return null;
-    }
-  }
-
-  async updateTemplate(id: string, updates: Partial<InsertScoreboardTemplate>) {
+  async findTemplateById(id: string): Promise<any> {
     try {
       const database = await getDb();
       if (!database) {
         throw new Error('Database not available');
       }
-      
-      const [updatedTemplate] = await database
-        .update(scoreboardTemplates)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(scoreboardTemplates.id, id))
-        .returning();
-      return updatedTemplate;
+
+      const [template] = await database.select().from(scoreboardTemplates).where(eq(scoreboardTemplates.id, parseInt(id)));
+      return template || null;
     } catch (error) {
-      console.error('Failed to update template:', error);
-      throw new Error('Failed to update template');
+      console.error('Failed to find template:', error);
+      return null;
     }
   }
 
-  async deleteTemplate(id: string) {
+  async updateTemplate(id: string, updates: Partial<InsertScoreboardTemplate>): Promise<any> {
     try {
       const database = await getDb();
       if (!database) {
-        return false;
+        throw new Error('Database not available');
       }
-      
-      await database.delete(scoreboardTemplates).where(eq(scoreboardTemplates.id, id));
+
+      const [updatedTemplate] = await database
+        .update(scoreboardTemplates)
+        .set(updates)
+        .where(eq(scoreboardTemplates.id, parseInt(id)))
+        .returning();
+
+      return updatedTemplate || null;
+    } catch (error) {
+      console.error('Failed to update template:', error);
+      return null;
+    }
+  }
+
+  async deleteTemplate(id: string): Promise<boolean> {
+    try {
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+
+      await database.delete(scoreboardTemplates).where(eq(scoreboardTemplates.id, parseInt(id)));
       return true;
     } catch (error) {
       console.error('Failed to delete template:', error);
@@ -504,7 +505,7 @@ export class DatabaseStorage {
       if (!database) {
         return [];
       }
-      
+
       return await database
         .select()
         .from(scoreboardTemplates)
@@ -522,7 +523,7 @@ export class DatabaseStorage {
       if (!database) {
         return [];
       }
-      
+
       return await database
         .select()
         .from(scoreboardTemplates)
@@ -542,7 +543,7 @@ export class DatabaseStorage {
         console.log('Database not available, skipping user data initialization');
         return;
       }
-      
+
       // Create default teams for the user
       const homeTeam = await this.createTeam({
         id: 1,
@@ -635,7 +636,7 @@ export class DatabaseStorage {
       if (!database) {
         return [];
       }
-      
+
       return await database.select().from(users);
     } catch (error) {
       console.error('Failed to get all users:', error);
@@ -649,7 +650,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(users).where(eq(users.id, userId));
       return true;
     } catch (error) {
@@ -664,7 +665,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(userSessions).where(eq(userSessions.userId, userId));
       return true;
     } catch (error) {
@@ -679,7 +680,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(settings).where(eq(settings.userId, userId));
       return true;
     } catch (error) {
@@ -694,7 +695,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(scoreboardTemplates).where(eq(scoreboardTemplates.userId, userId));
       return true;
     } catch (error) {
@@ -709,7 +710,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(matches).where(eq(matches.userId, userId));
       return true;
     } catch (error) {
@@ -724,7 +725,7 @@ export class DatabaseStorage {
       if (!database) {
         return false;
       }
-      
+
       await database.delete(teams).where(eq(teams.userId, userId));
       return true;
     } catch (error) {

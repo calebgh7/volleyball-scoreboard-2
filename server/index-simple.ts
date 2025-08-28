@@ -1,5 +1,5 @@
-import express from 'express';
-import cors from 'cors';
+import * as express from 'express';
+import * as cors from 'cors';
 import { databaseStorage } from './database-storage.js';
 import { registerUser, loginUser, authenticateUser, logoutUser } from './auth-simple.js';
 import { authenticateToken } from './auth-middleware.js';
@@ -499,7 +499,7 @@ app.post('/api/upload/logo', authenticateToken, async (req, res) => {
         width: 512,
         height: 512,
         crop: 'limit',
-        quality: 'auto'
+        quality: 80
       }
     });
 
@@ -548,7 +548,7 @@ app.post('/api/upload/sponsor', authenticateToken, async (req, res) => {
         width: 800,
         height: 400,
         crop: 'limit',
-        quality: 'auto'
+        quality: 80
       }
     });
 
