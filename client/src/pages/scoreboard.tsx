@@ -47,10 +47,18 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
   // Team update function
   const handleTeamUpdate = async (team: 'home' | 'away', field: string, value: string) => {
     try {
+      console.log('🔧 handleTeamUpdate called with:', { team, field, value });
+      console.log('🔧 currentMatch:', currentMatch);
+      
       const teamId = team === 'home' ? currentMatch?.homeTeam?.id : currentMatch?.awayTeam?.id;
-      if (!teamId) return;
+      console.log('🔧 teamId:', teamId);
+      
+      if (!teamId) {
+        console.error('❌ No team ID found for:', team);
+        return;
+      }
 
-      console.log(`Updating ${team} team ${field} to:`, value, 'Team ID:', teamId);
+      console.log(`🔧 Updating ${team} team ${field} to:`, value, 'Team ID:', teamId);
 
       const response = await fetch(`/api/teams/${teamId}`, {
         method: 'PATCH',
@@ -60,16 +68,21 @@ export default function Scoreboard({ user, token, onLogout }: ScoreboardProps) {
         body: JSON.stringify({ [field]: value }),
       });
 
+      console.log('🔧 API response status:', response.status);
+
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('🔧 API response data:', responseData);
+        
         // Refresh the data to show updated team information
         queryClient.invalidateQueries({ queryKey: ['/api/current-match'] });
-        console.log(`Team ${team} ${field} updated to:`, value);
+        console.log(`✅ Team ${team} ${field} updated to:`, value);
       } else {
         const errorData = await response.json();
-        console.error('Team update failed:', errorData);
+        console.error('❌ Team update failed:', errorData);
       }
     } catch (error) {
-      console.error('Failed to update team:', error);
+      console.error('❌ Failed to update team:', error);
     }
   };
 

@@ -512,7 +512,13 @@ export default function ControlPanel({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Home Team</Label>
                 <Input 
                   value={homeTeam?.name || ''}
-                  onChange={(e) => onTeamUpdate && onTeamUpdate('home', 'name', e.target.value)}
+                  onChange={(e) => {
+                    console.log('🔧 Home team name onChange:', e.target.value);
+                    console.log('🔧 onTeamUpdate available:', !!onTeamUpdate);
+                    if (onTeamUpdate) {
+                      onTeamUpdate('home', 'name', e.target.value);
+                    }
+                  }}
                   placeholder="Team Name"
                   className="mb-2"
                 />
@@ -631,7 +637,13 @@ export default function ControlPanel({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Away Team</Label>
                 <Input 
                   value={awayTeam?.name || ''}
-                  onChange={(e) => onTeamUpdate && onTeamUpdate('away', 'name', e.target.value)}
+                  onChange={(e) => {
+                    console.log('🔧 Away team name onChange:', e.target.value);
+                    console.log('🔧 onTeamUpdate available:', !!onTeamUpdate);
+                    if (onTeamUpdate) {
+                      onTeamUpdate('away', 'name', e.target.value);
+                    }
+                  }}
                   placeholder="Team Name"
                   className="mb-2"
                 />
